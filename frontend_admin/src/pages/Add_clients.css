@@ -12,21 +12,31 @@
   --error: #ef4444;
 }
 
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 .client-wrapper {
   min-height: 100vh;
   background-color: var(--bg-body);
   padding: 40px 20px;
   display: flex;
   justify-content: center;
+  box-sizing: border-box;
+  overflow-x: hidden;
 }
 
 .client-card {
   width: 100%;
   max-width: 900px;
   background: var(--card-bg);
-  padding: 40px;
+  padding: 20px;
   border-radius: 16px;
   box-shadow: 0 10px 25px rgba(0, 0, 0, 0.05);
+  min-width: 0;
+  margin-left: 200px;
 }
 
 .header {
@@ -45,10 +55,9 @@
   font-size: 0.95rem;
 }
 
-/* Grille d'inputs principale */
 .input-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 20px;
   margin-bottom: 30px;
 }
@@ -57,6 +66,7 @@
   display: flex;
   flex-direction: column;
   gap: 8px;
+  min-width: 0;
 }
 
 .input-group label {
@@ -72,6 +82,7 @@
   font-size: 0.9rem;
   transition: all 0.2s;
   background: #fcfcfc;
+  width: 100%;
 }
 
 .input-group input:focus {
@@ -87,12 +98,12 @@
   margin: 40px 0;
 }
 
-/* Section Configuration des Boutons */
 .buttons-config-section {
   background: #f8fafc;
   padding: 25px;
   border-radius: 12px;
   border: 1px solid var(--border-color);
+  min-width: 0;
 }
 
 .section-header {
@@ -100,6 +111,8 @@
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 10px;
 }
 
 .section-header h3 {
@@ -116,6 +129,7 @@
   font-weight: 600;
   cursor: pointer;
   transition: all 0.2s;
+  white-space: nowrap;
 }
 
 .add-btn-row:hover {
@@ -123,20 +137,26 @@
   color: #fff;
 }
 
-/* Ligne d'un bouton */
+.button-row-container {
+  min-width: 0;
+}
+
 .button-row {
   display: flex;
-  align-items: flex-end; /* Aligne tous les blocs par le bas */
+  align-items: flex-end;
   gap: 12px;
   padding: 15px;
   background: #fff;
   border: 1px solid var(--border-color);
   border-radius: 8px;
   margin-bottom: 12px;
+  flex-wrap: wrap;
+  min-width: 0;
 }
 
 .btn-input {
   flex: 2;
+  min-width: 120px;
   display: flex;
   flex-direction: column;
   gap: 5px;
@@ -144,6 +164,7 @@
 
 .btn-input.tiny {
   flex: 0 0 60px;
+  min-width: 60px;
 }
 
 .btn-input label {
@@ -158,6 +179,7 @@
   border: 1px solid var(--border-color);
   border-radius: 6px;
   font-size: 0.85rem;
+  width: 100%;
 }
 
 .btn-input input[type="color"] {
@@ -166,7 +188,6 @@
   cursor: pointer;
 }
 
-/* Conteneur de l'aperçu aligné avec les inputs */
 .preview-container {
   display: flex;
   flex-direction: column;
@@ -176,19 +197,36 @@
   gap: 5px;
 }
 
+.btn-preview-mini {
+  display: flex;
+  flex-direction: column;
+  gap: 5px;
+  flex: 0 1 auto;
+  min-width: 80px;
+}
+
+.btn-preview-mini label {
+  font-size: 0.7rem;
+  text-transform: uppercase;
+  color: var(--text-muted);
+  font-weight: 700;
+}
+
 .preview-box {
-  height: 38px; /* Même hauteur que les inputs */
+  height: 38px;
   border-radius: 6px;
   display: flex;
   align-items: center;
   justify-content: center;
   border: 1px solid var(--border-color);
-  box-shadow: 0 2px 4px rgba(0,0,0,0.05);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
   font-size: 0.85rem;
   font-weight: 600;
   white-space: nowrap;
   transition: all 0.2s ease;
-  box-sizing: border-box;
+  padding: 0 10px;
+  min-width: 40px;
+  width: auto;
 }
 
 .preview-box i {
@@ -199,18 +237,19 @@
   font-size: 0.85rem;
 }
 
-/* Bouton supprimer */
 .delete-btn {
   background: #fee2e2;
   color: var(--error);
   border: none;
   width: 38px;
   height: 38px;
+  min-width: 38px;
   border-radius: 6px;
   font-size: 1.4rem;
   line-height: 1;
   cursor: pointer;
   transition: all 0.2s;
+  align-self: flex-end;
 }
 
 .delete-btn:hover {
@@ -218,7 +257,6 @@
   color: #fff;
 }
 
-/* Messages & Submit */
 .message {
   padding: 12px;
   border-radius: 8px;
@@ -255,18 +293,6 @@
   background: var(--primary-hover);
 }
 
-/* Responsive */
-@media (max-width: 768px) {
-  .button-row {
-    flex-wrap: wrap;
-  }
-  .btn-input {
-    flex: 1 1 45%;
-  }
-  .input-grid {
-    grid-template-columns: 1fr;
-  }
-}
 .icon-select {
   padding: 8px 12px;
   border: 1px solid var(--border-color);
@@ -276,9 +302,52 @@
   cursor: pointer;
   outline: none;
   transition: border-color 0.2s;
-  height: 38px; /* Pour s'aligner parfaitement avec les autres */
+  height: 38px;
+  width: 100%;
 }
 
 .icon-select:focus {
   border-color: var(--primary);
+}
+
+@media (max-width: 768px) {
+  .client-card {
+    padding: 24px 16px;
+  }
+
+  .input-grid {
+    grid-template-columns: 1fr;
+  }
+
+  .button-row {
+    flex-wrap: wrap;
+    gap: 10px;
+  }
+
+  .btn-input {
+    flex: 1 1 45%;
+    min-width: 100px;
+  }
+
+  .btn-input.tiny {
+    flex: 0 0 60px;
+  }
+
+  .buttons-config-section {
+    padding: 16px;
+  }
+}
+
+@media (max-width: 480px) {
+  .client-card {
+    padding: 16px 12px;
+  }
+
+  .btn-input {
+    flex: 1 1 100%;
+  }
+
+  .btn-input.tiny {
+    flex: 0 0 60px;
+  }
 }
