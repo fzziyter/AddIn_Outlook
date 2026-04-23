@@ -4,14 +4,14 @@ interface ClientButton {
   id: number;
   client_id: number;
   label: string;
-  event_name: string;
+
   bg_color: string;
   text_color: string;
   icon: string;
   dolibarr_type_code: string | null;
 }
 
-const API_BASE_URL = "http://localhost/backend/backend_addIn"
+const API_BASE_URL = "http://localhost:8000"
 // ─────────────────────────────────────────────
 //  INIT
 // ─────────────────────────────────────────────
@@ -109,7 +109,7 @@ async function loadActionButtons(sessionToken: string): Promise<void> {
       button.className = "action-btn";
       button.setAttribute("type", "button");
       button.setAttribute("data-label",              buttonData.label);
-      button.setAttribute("data-event-name",         buttonData.event_name);
+    
       // ── Store icon + type so handleAction can read them ──
       button.setAttribute("data-icon",               buttonData.icon || "fas fa-tag");
       button.setAttribute("data-dolibarr-type-code", buttonData.dolibarr_type_code || "");

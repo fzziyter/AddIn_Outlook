@@ -69,7 +69,7 @@ try {
 
     // Réinsertion groupée si des boutons sont présents
     if (isset($data['buttons']) && is_array($data['buttons']) && count($data['buttons']) > 0) {
-        $sqlIns = "INSERT INTO client_buttons (client_id, label, event_name, bg_color, text_color, icon) VALUES ";
+        $sqlIns = "INSERT INTO client_buttons (client_id, label, bg_color, text_color, icon) VALUES ";
         $placeholders = [];
         $values = [];
 
@@ -77,7 +77,7 @@ try {
             $placeholders[] = "(?, ?, ?, ?, ?, ?)";
             $values[] = $id;
             $values[] = $btn['label'] ?? '';
-            $values[] = $btn['event_name'] ?? '';
+            
             $values[] = $btn['bg_color'] ?? '#2563eb';
             $values[] = $btn['text_color'] ?? '#ffffff';
             $values[] = $btn['icon'] ?? 'fas fa-tag';

@@ -28,7 +28,7 @@ export default function AddClient() {
 
   // Alignement avec la BD : label, event_name, bg_color, text_color, icon
   const [buttons, setButtons] = useState([
-    { label: "", event_name: "", bg_color: "#2563eb", text_color: "#ffffff", icon: "fas fa-tag" }
+    { label: "", bg_color: "#2563eb", text_color: "#ffffff", icon: "fas fa-tag" }
   ]);
 
   const [message, setMessage] = useState("");
@@ -46,7 +46,7 @@ export default function AddClient() {
   };
 
   const addButton = () => {
-    setButtons([...buttons, { label: "", event_name: "", bg_color: "#2563eb", text_color: "#ffffff", icon: "fas fa-tag" }]);
+    setButtons([...buttons, { label: "", bg_color: "#2563eb", text_color: "#ffffff", icon: "fas fa-tag" }]);
   };
 
   const removeButton = (index) => {
@@ -103,7 +103,7 @@ useEffect(() => {
           site_number: "", email: "", dolibarr_url: "", token_url: "",
           username: "", password: "", dolibarr_api_key: "", domain: "", logo: "",
         });
-        setButtons([{ label: "", event_name: "", bg_color: "#2563eb", text_color: "#ffffff", icon: "fas fa-tag" }]);
+        setButtons([{ label: "", bg_color: "#2563eb", text_color: "#ffffff", icon: "fas fa-tag" }]);
         
         setTimeout(() => navigate("/clients"), 2000);
       } else {
@@ -171,14 +171,7 @@ useEffect(() => {
                       onChange={(e) => handleButtonChange(index, "label", e.target.value)}
                     />
                   </div>
-                  <div className="btn-input">
-                    <label>Événement</label>
-                    <input
-                      type="text"
-                      value={btn.event_name}
-                      onChange={(e) => handleButtonChange(index, "event_name", e.target.value)}
-                    />
-                  </div>
+                 
                   <div className="btn-input">
   <label>Icône</label>
   <select

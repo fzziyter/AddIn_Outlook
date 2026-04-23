@@ -20,7 +20,7 @@ const ICON_OPTIONS = [
 
 const DEFAULT_BUTTON = {
   label: "",
-  event_name: "",
+ 
   bg_color: "#2563eb",
   text_color: "#ffffff",
   icon: "fas fa-tag",
@@ -187,14 +187,9 @@ export default function AddButtonsToExisting() {
                   type="text"
                   value={btn.label}
                   onChange={(e) => updateButton(index, "label", e.target.value)}
-                  placeholder="Label (ex : Devis)"
+                  placeholder="Nom d'événement "
                 />
-                <input
-                  type="text"
-                  value={btn.event_name}
-                  onChange={(e) => updateButton(index, "event_name", e.target.value)}
-                  placeholder="Nom événement"
-                />
+                
               </div>
 
               {/* Icon selector + Dolibarr type — second row */}

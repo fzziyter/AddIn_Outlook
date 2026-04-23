@@ -29,7 +29,7 @@ try {
     // ── Insert / replace buttons ──────────────────────────────────────────────
     $stmt = $conn->prepare(
         "INSERT INTO client_buttons
-            (client_id, label, event_name, bg_color, text_color, icon, dolibarr_type_code)
+            (client_id, label, bg_color, text_color, icon, dolibarr_type_code)
          VALUES (?, ?, ?, ?, ?, ?, ?)"
     );
 
@@ -43,7 +43,7 @@ try {
             $stmt->execute([
                 $data['client_id'],
                 $btn['label'],
-                $btn['event_name']   ?? '',
+                
                 $btn['bg_color']     ?? '#2563eb',
                 $btn['text_color']   ?? '#ffffff',
                 $btn['icon']         ?? 'fas fa-tag',

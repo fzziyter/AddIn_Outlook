@@ -50,7 +50,7 @@ try {
     if (isset($data['buttons']) && is_array($data['buttons'])) {
         // AJUSTEMENT : On utilise les clés envoyées par le JS (bg_color, text_color, icon)
         $stmtBtn = $conn->prepare("
-            INSERT INTO client_buttons (client_id, label, event_name, bg_color, text_color, icon) 
+            INSERT INTO client_buttons (client_id, label,  bg_color, text_color, icon) 
             VALUES (?, ?, ?, ?, ?, ?)
         ");
 
@@ -59,7 +59,7 @@ try {
                 $stmtBtn->execute([
                     $clientId,
                     $btn['label'],
-                    $btn['event_name'],
+                    
                     $btn['bg_color'] ?? '#2563eb',
                     $btn['text_color'] ?? '#ffffff',
                     $btn['icon'] ?? 'fas fa-tag'

@@ -86,7 +86,7 @@ export default function EditClient() {
   };
 
   const addButton = () => {
-    setButtons([...buttons, { label: "", event_name: "", bg_color: "#2563eb", text_color: "#ffffff", icon: "fas fa-tag" }]);
+    setButtons([...buttons, { label: "", bg_color: "#2563eb", text_color: "#ffffff", icon: "fas fa-tag" }]);
   };
 
   const removeButton = (index) => {
@@ -174,15 +174,7 @@ export default function EditClient() {
                       required
                     />
                   </div>
-                  <div className="btn-input">
-                    <label>Événement</label>
-                    <input
-                      type="text"
-                      value={btn.event_name}
-                      onChange={(e) => handleButtonChange(index, "event_name", e.target.value)}
-                      required
-                    />
-                  </div>
+                  
                   <div className="btn-input">
                     <label>Icône</label>
                     <select
