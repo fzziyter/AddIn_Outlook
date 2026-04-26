@@ -30,7 +30,7 @@ try {
     $stmt = $conn->prepare(
         "INSERT INTO client_buttons
             (client_id, label, bg_color, text_color, icon, dolibarr_type_code)
-         VALUES (?, ?, ?, ?, ?, ?, ?)"
+         VALUES (?, ?, ?, ?, ?, ?)"
     );
 
     foreach ($data['buttons'] as $btn) {

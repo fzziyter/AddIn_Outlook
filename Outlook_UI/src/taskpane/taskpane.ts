@@ -288,22 +288,72 @@ function getAttachments(): Promise<AttachmentData[]> {
     });
   });
 }
+// ─────────────────────────────────────────────
+//  VÉRIFICATION TIERS (expéditeur = client ?)
+// ─────────────────────────────────────────────
+interface TiersCheckResponse {
+  status: string;
+  found: boolean;
+  name?: string;
+  id?: number;
+  matched_via?: string;
+  message?: string;
+  reason?: string;
+}
+
+async function checkSenderIsClient(
+  sessionToken: string,
+  senderEmail: string
+): Promise<TiersCheckResponse> {
+  const response = await fetch(`${API_BASE_URL}/tiers/checkTiersByDomain.php`, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({ session_token: sessionToken, sender_email: senderEmail }),
+  });
+  return response.json();
+}
 
 // ─────────────────────────────────────────────
 //  ACTION — Envoi vers Dolibarr
 // ─────────────────────────────────────────────
-async function handleAction(btn: HTMLButtonElement): Promise<void> {  const actionLabel    = btn.getAttribute("data-label")              || "Action";
-  const dolibarrType   = btn.getAttribute("data-dolibarr-type-code") || null;
-  const sessionToken   = (window as any).__divaSessionToken;
-  const userEmail      = (window as any).__divaUserEmail;
-  const emailInfo      = getEmailInfo();
-  const item           = Office.context.mailbox?.item;
+async function handleAction(btn: HTMLButtonElement): Promise<void> {
+  const actionLabel  = btn.getAttribute("data-label")              || "Action";
+  const dolibarrType = btn.getAttribute("data-dolibarr-type-code") || null;
+  const sessionToken = (window as any).__divaSessionToken;
+  const userEmail    = (window as any).__divaUserEmail;
+  const emailInfo    = getEmailInfo();
+  const item         = Office.context.mailbox?.item;
 
   if (!actionLabel || !sessionToken || !item) {
     console.error("[Diva] Action, Session ou Item manquant");
     return;
   }
 
+  // ── 1. Vérifier si l'expéditeur est un client connu ──
+  const senderEmail = emailInfo?.senderEmail || "";
+  setStatus("loading", "Vérification du client…");
+
+  try {
+    const tiersCheck = await checkSenderIsClient(sessionToken, senderEmail);
+
+    if (!tiersCheck.found) {
+      setStatus("error", "Client non trouvé");
+      return; // ← Stop here, do NOT create the event
+    }
+
+    // ── 2. Client found — brief feedback ──
+    setStatus("ready", "Client trouvé");
+
+  } catch (err) {
+    console.error("[Diva] Erreur vérification tiers :", err);
+    setStatus("error", "Erreur lors de la vérification");
+    return;
+  }
+
+  // ── 3. Short pause so the user sees "Client trouvé" ──
+  await new Promise((resolve) => setTimeout(resolve, 800));
+
+  // ── 4. Proceed with event creation ──
   item.body.getAsync(Office.CoercionType.Text, async (result: Office.AsyncResult<string>) => {
     if (result.status === Office.AsyncResultStatus.Succeeded) {
 
@@ -311,15 +361,14 @@ async function handleAction(btn: HTMLButtonElement): Promise<void> {  const acti
       const attachments = await getAttachments();
 
       const payload = {
-        session_token:       sessionToken,
-        user_email:          userEmail,
-        sender_email:        emailInfo?.senderEmail,
-        subject:             emailInfo?.subject,
-        email_body:          btoa(unescape(encodeURIComponent(result.value))),
-        action_label:        actionLabel,
-        // ── Passes the button's type code (null = use server-side cascade) ──
-        dolibarr_type_code:  dolibarrType,
-        attachments:         attachments,
+        session_token:      sessionToken,
+        user_email:         userEmail,
+        sender_email:       emailInfo?.senderEmail,
+        subject:            emailInfo?.subject,
+        email_body:         btoa(unescape(encodeURIComponent(result.value))),
+        action_label:       actionLabel,
+        dolibarr_type_code: dolibarrType,
+        attachments:        attachments,
       };
 
       try {
@@ -342,7 +391,7 @@ async function handleAction(btn: HTMLButtonElement): Promise<void> {  const acti
       }
     }
   });
-};
+}
 
 // ─────────────────────────────────────────────
 //  UTILITAIRES
