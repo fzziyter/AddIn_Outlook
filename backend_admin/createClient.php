@@ -18,14 +18,13 @@ if (!$data) {
 }
 
 try {
-    $conn->beginTransaction();
-
-    // 1. Insertion du Client
+    // 1. Préparation des données
     $hashedPassword = password_hash($data["password"], PASSWORD_DEFAULT);
     
     // Calcul du domaine si vide
     $domain = !empty($data["domain"]) ? $data["domain"] : substr(strrchr($data["email"], "@"), 1);
 
+    // 2. Insertion du Client uniquement
     $stmtClient = $conn->prepare("
         INSERT INTO clients 
         (site_number, email, dolibarr_url, token_url, username, password, dolibarr_api_key, domain, logo)
@@ -46,41 +45,13 @@ try {
 
     $clientId = $conn->lastInsertId();
 
-    // 2. Insertion des Boutons
-    if (isset($data['buttons']) && is_array($data['buttons'])) {
-        // AJUSTEMENT : On utilise les clés envoyées par le JS (bg_color, text_color, icon)
-        $stmtBtn = $conn->prepare("
-            INSERT INTO client_buttons (client_id, label,  bg_color, text_color, icon) 
-            VALUES (?, ?, ?, ?, ?, ?)
-        ");
-
-        foreach ($data['buttons'] as $btn) {
-            if (!empty($btn['label'])) {
-                $stmtBtn->execute([
-                    $clientId,
-                    $btn['label'],
-                    
-                    $btn['bg_color'] ?? '#2563eb',
-                    $btn['text_color'] ?? '#ffffff',
-                    $btn['icon'] ?? 'fas fa-tag'
-                ]);
-            }
-        }
-    }
-
-    $conn->commit();
-
     echo json_encode([
         "success" => true, 
-        "message" => "Client et boutons créés avec succès",
+        "message" => "Client créé avec succès",
         "client_id" => $clientId
     ]);
 
 } catch (PDOException $e) {
-    if ($conn->inTransaction()) {
-        $conn->rollBack();
-    }
-    
     echo json_encode([
         "success" => false,
         "error" => "Erreur de base de données",

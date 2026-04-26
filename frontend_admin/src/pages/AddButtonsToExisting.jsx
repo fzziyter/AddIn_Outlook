@@ -71,12 +71,33 @@ export default function AddButtonsToExisting() {
       setTypesLoading(false);
     }
   }, []);
+  // Add this new fetch function alongside fetchTypes
+const fetchButtons = useCallback(async (clientId) => {
+  if (!clientId) { setButtons([{ ...DEFAULT_BUTTON }]); return; }
+  try {
+    const res  = await fetch(`${API_BACK_URL}/getClientDetails.php?id=${clientId}`);
+    const json = await res.json();
+    if (json.success && json.buttons?.length > 0) {
+      // Normalize: make sure dolibarr_type_code is always a string for the select
+      setButtons(json.buttons.map(b => ({
+        ...DEFAULT_BUTTON,
+        ...b,
+        dolibarr_type_code: b.dolibarr_type_code ?? "",
+      })));
+    } else {
+      setButtons([{ ...DEFAULT_BUTTON }]); // blank slate if none exist
+    }
+  } catch {
+    setButtons([{ ...DEFAULT_BUTTON }]);
+  }
+}, []);
 
   const handleClientChange = (e) => {
     const id = e.target.value;
     setSelectedClientId(id);
     setMessage("");
     fetchTypes(id);
+    fetchButtons(id);   // ← add this line
   };
 
   // ── Button helpers ───────────────────────────────────────────────────────
