@@ -22,7 +22,7 @@ try {
     }
 
     // 2. Récupérer ses boutons personnalisés
-    $stmtBtn = $conn->prepare("SELECT label,  bg_color, text_color, icon FROM client_buttons WHERE client_id = ?");
+    $stmtBtn = $conn->prepare("SELECT label,  bg_color, text_color, icon,dolibarr_type_code FROM client_buttons WHERE client_id = ?");
     $stmtBtn->execute([$id]);
     $buttons = $stmtBtn->fetchAll(PDO::FETCH_ASSOC);
 

@@ -81,6 +81,6 @@ echo json_encode([
     "success"      => true,
     "types"        => $normalised,
     "client_default" => $client['default_dolibarr_type_code'],
-    "client_default" => $client['default_dolibarr_type_code'],
+    
 ]);
 ?>
