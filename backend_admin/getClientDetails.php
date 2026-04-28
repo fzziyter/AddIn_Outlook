@@ -3,7 +3,7 @@ header("Access-Control-Allow-Origin: *");
 header("Content-Type: application/json");
 include "db.php";
 
-$id = $_GET['id'];
+$id = $_GET['id'] ?? null;
 
 if (!$id) {
     echo json_encode(["success" => false, "error" => "ID manquant"]);
@@ -21,17 +21,30 @@ try {
         exit;
     }
 
-    // 2. Récupérer ses boutons personnalisés
-    $stmtBtn = $conn->prepare("SELECT label,  bg_color, text_color, icon,dolibarr_type_code FROM client_buttons WHERE client_id = ?");
+    // 2. Récupérer les boutons + label du type via JOIN
+    $stmtBtn = $conn->prepare("
+        SELECT 
+            cb.id,
+            cb.label,
+            cb.bg_color,
+            cb.text_color,
+            cb.icon,
+            cb.dolibarr_type_code,
+            det.label AS dolibarr_type_label
+        FROM client_buttons cb
+        LEFT JOIN dolibarr_event_types det ON det.code = cb.dolibarr_type_code
+        WHERE cb.client_id = ?
+    ");
     $stmtBtn->execute([$id]);
     $buttons = $stmtBtn->fetchAll(PDO::FETCH_ASSOC);
 
     echo json_encode([
-        "success" => true, 
-        "client" => $client, 
-        "buttons" => $buttons
+        "success" => true,
+        "client"  => $client,
+        "buttons" => $buttons,
     ]);
 
 } catch (Exception $e) {
     echo json_encode(["success" => false, "error" => $e->getMessage()]);
 }
+?>

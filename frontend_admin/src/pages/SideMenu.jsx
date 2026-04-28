@@ -26,10 +26,7 @@ function SideMenu() {
           <i className="fas fa-users"></i>
           <span>Liste des Clients</span>
         </NavLink>
-        <NavLink to="/add-buttons" className={({ isActive }) => isActive ? "nav-item active" : "nav-item"}>
-          <i className="fas fa-plus-circle"></i>
-          <span>Ajouter des bouttons</span>
-        </NavLink>
+        
 
 
       </nav>

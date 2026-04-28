@@ -194,7 +194,7 @@ export default function EditClient() {
                 {typesLoading ? "Chargement…" : `Aucun défaut (fallback : ${FALLBACK_TYPE})`}
               </option>
               {eventTypes.map(t => (
-                <option key={t.code} value={t.code}>{t.label} ({t.code})</option>
+                <option key={t.code} value={t.code}>{t.label} </option>
               ))}
             </select>
           </div>
@@ -249,7 +249,7 @@ export default function EditClient() {
                         {typesLoading ? "Chargement…" : "Hériter du défaut client"}
                       </option>
                       {eventTypes.map(t => (
-                        <option key={t.code} value={t.code}>{t.label} ({t.code})</option>
+                        <option key={t.code} value={t.code}>{t.label} </option>
                       ))}
                     </select>
                     {/* Cascade preview */}
