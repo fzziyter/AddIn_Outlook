@@ -40,6 +40,7 @@ $subject          = $data["subject"]            ?? "(Sans objet)";
 $action_label     = $data["action_label"]       ?? "Événement";
 $attachments      = $data["attachments"]        ?? [];
 $button_type_code = $data["dolibarr_type_code"] ?? null;
+$socid            = $data["socid"] ?? null;
 
 $stmt = $conn->prepare("SELECT dolibarr_url, dolibarr_api_key FROM clients WHERE session_token = ?");
 $stmt->execute([$session_token]);
@@ -61,6 +62,7 @@ $event_data = [
     "datep"        => time(),
     "percentage"   => 0,
     "priority"     => 1,
+    "socid"        => $socid,
 ];
 
 $ch = curl_init();

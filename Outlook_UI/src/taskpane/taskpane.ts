@@ -323,12 +323,15 @@ async function handleAction(btn: HTMLButtonElement): Promise<void> {
   const emailInfo    = getEmailInfo();
   const item         = Office.context.mailbox?.item;
 
+  // 1. DÉCLARATION DU SCOPE : accessible partout dans handleAction
+  let tiersId: number | null = null;
+
   if (!actionLabel || !sessionToken || !item) {
     console.error("[Diva] Action, Session ou Item manquant");
     return;
   }
 
-  // ── 1. Vérifier si l'expéditeur est un client connu ──
+  // ── 2. VÉRIFICATION DU TIERS (Client) ──
   const senderEmail = emailInfo?.senderEmail || "";
   setStatus("loading", "Vérification du client…");
 
@@ -337,22 +340,23 @@ async function handleAction(btn: HTMLButtonElement): Promise<void> {
 
     if (!tiersCheck.found) {
       setStatus("error", "Client non trouvé");
-      return; // ← Stop here, do NOT create the event
+      return; // On arrête si le tiers n'existe pas dans Dolibarr
     }
 
-    // ── 2. Client found — brief feedback ──
-    setStatus("ready", "Client trouvé");
+    // On récupère l'ID renvoyé par checkTiersByDomain.php[cite: 15]
+    tiersId = tiersCheck.id || null; 
+    setStatus("ready", `Client : ${tiersCheck.name}`);
 
   } catch (err) {
     console.error("[Diva] Erreur vérification tiers :", err);
-    setStatus("error", "Erreur lors de la vérification");
+    setStatus("error", "Erreur réseau (vérification)");
     return;
   }
 
-  // ── 3. Short pause so the user sees "Client trouvé" ──
+  // Courte pause pour que l'utilisateur voit le nom du client trouvé
   await new Promise((resolve) => setTimeout(resolve, 800));
 
-  // ── 4. Proceed with event creation ──
+  // ── 3. RÉCUPÉRATION DU CORPS ET CRÉATION ──
   item.body.getAsync(Office.CoercionType.Text, async (result: Office.AsyncResult<string>) => {
     if (result.status === Office.AsyncResultStatus.Succeeded) {
 
@@ -368,6 +372,7 @@ async function handleAction(btn: HTMLButtonElement): Promise<void> {
         action_label:       actionLabel,
         dolibarr_type_code: dolibarrType,
         attachments:        attachments,
+        socid:              tiersId, // Liaison cruciale avec le tiers[cite: 14]
       };
 
       try {
@@ -377,17 +382,21 @@ async function handleAction(btn: HTMLButtonElement): Promise<void> {
           headers: { "Content-Type": "application/json" },
           body:    JSON.stringify(payload),
         });
+        
         const data = await response.json();
+        
         if (data.success) {
           const pjMsg = attachments.length > 0 ? ` (${attachments.length} PJ)` : "";
           setStatus("ready", `Événement créé !${pjMsg}`);
         } else {
-          setStatus("error", "Échec de création");
+          setStatus("error", data.error || "Échec de création");
         }
       } catch (err) {
         console.error("[Diva] Erreur lors de l'envoi :", err);
-        setStatus("error", "Erreur réseau");
+        setStatus("error", "Erreur réseau (création)");
       }
+    } else {
+      setStatus("error", "Impossible de lire le corps de l'email");
     }
   });
 }
