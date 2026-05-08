@@ -31,7 +31,8 @@ try {
             bg_color,
             text_color,
             icon,
-            dolibarr_type_code
+            dolibarr_type_code,
+            allow_linked_events
         FROM client_buttons 
         WHERE client_id = ?
     ");
