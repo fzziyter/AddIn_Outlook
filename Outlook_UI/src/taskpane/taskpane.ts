@@ -12,7 +12,7 @@ interface ClientButton {
   allow_linked_events: boolean;
 }
 
-const API_BASE_URL = "http://localhost/backend/backend_AddIn";// ─────────────────────────────────────────────
+const API_BASE_URL = "http://localhost/backend_AddIn";// ─────────────────────────────────────────────
 //  INIT
 // ─────────────────────────────────────────────
 Office.onReady(() => {
