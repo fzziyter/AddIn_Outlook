@@ -1,26 +1,18 @@
 import React, { useState, useEffect } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import axios from "axios";
-import { API_BACK_URL } from "../config/config";
+import { API_BACK_URL, ICONS_BASE_URL } from "../config/config";
 import "./EditClient.css";
 
-// Options d'icônes FontAwesome pour le menu déroulant
-const ICON_OPTIONS = [
-  { label: "Étiquette",    value: "fas fa-tag" },
-  { label: "Lien",         value: "fas fa-link" },
-  { label: "Étoile",       value: "fas fa-star" },
-  { label: "Cœur",         value: "fas fa-heart" },
-  { label: "Check",        value: "fas fa-check" },
-  { label: "Info",         value: "fas fa-info-circle" },
-  { label: "Utilisateur",  value: "fas fa-user" },
-  { label: "Panier",       value: "fas fa-shopping-cart" },
-];
+// ICONS_BASE_URL pointe vers le dossier /icons/ à la racine du serveur
+// ex: "http://ton-domaine.com/icons"  ou  "http://localhost/icons"
+// Définis cette variable dans ton config.js :
+//   export const ICONS_BASE_URL = "http://localhost/icons";
 
 export default function EditClient() {
   const { id } = useParams();
   const navigate = useNavigate();
 
-  // État pour les champs principaux du client
   const [form, setForm] = useState({
     site_number: "",
     email: "",
@@ -33,14 +25,36 @@ export default function EditClient() {
     logo: "",
   });
 
-  // États pour la gestion des boutons et des types Dolibarr
-  const [buttons, setButtons] = useState([]);
-  const [eventTypes, setEventTypes] = useState([]);
+  const [buttons,      setButtons]      = useState([]);
+  const [eventTypes,   setEventTypes]   = useState([]);
+  const [iconOptions,  setIconOptions]  = useState([]); // chargé depuis icons.json
   const [typesLoading, setTypesLoading] = useState(false);
-  const [loading, setLoading] = useState(true);
-  const [message, setMessage] = useState("");
+  const [iconsLoading, setIconsLoading] = useState(true);
+  const [loading,      setLoading]      = useState(true);
+  const [message,      setMessage]      = useState("");
 
-  // ── 1. Chargement des détails du client et de ses boutons ────────────────
+  // ── 1. Chargement dynamique des icônes depuis icons/icons.json ───────────
+  // Aucun changement de code nécessaire pour ajouter une nouvelle icône :
+  // il suffit de déposer le fichier dans /icons/ et d'ajouter une ligne dans icons.json
+  useEffect(() => {
+    const fetchIcons = async () => {
+      setIconsLoading(true);
+      try {
+        const res = await fetch(`${ICONS_BASE_URL}?file=icons.json`);
+        const data = await res.json();
+        // data = [{ label: "Étiquette", file: "tag.svg" }, ...]
+        setIconOptions(data);
+      } catch (err) {
+        console.error("Erreur chargement icônes :", err);
+        setIconOptions([]);
+      } finally {
+        setIconsLoading(false);
+      }
+    };
+    fetchIcons();
+  }, []);
+
+  // ── 2. Chargement des détails du client et de ses boutons ────────────────
   useEffect(() => {
     const fetchClientDetails = async () => {
       try {
@@ -54,16 +68,15 @@ export default function EditClient() {
             token_url:        c.token_url        || "",
             username:         c.username         || "",
             password:         c.password         || "",
-            dolibarr_api_key: c.dolibarr_api_key  || "",
+            dolibarr_api_key: c.dolibarr_api_key || "",
             domain:           c.domain           || "",
             logo:             c.logo             || "",
           });
-          
           setButtons(
             (res.data.buttons || []).map(b => ({
               ...b,
-              dolibarr_type_code: b.dolibarr_type_code ?? "",
-              allow_linked_events: b.allow_linked_events == 1 // Convertit 1/0 en true/false
+              dolibarr_type_code:  b.dolibarr_type_code ?? "",
+              allow_linked_events: b.allow_linked_events == 1,
             }))
           );
         } else {
@@ -78,32 +91,53 @@ export default function EditClient() {
     fetchClientDetails();
   }, [id]);
 
-  // ── 2. Chargement des types d'événements Dolibarr ──────────────────────────
-useEffect(() => {
-  const fetchTypes = async () => {
-    setTypesLoading(true);
-    try {
-      // On ajoute le paramètre client_id à l'URL
-      const res = await axios.get(`${API_BACK_URL}/GetDolibarrEventTypes.php?client_id=${id}`);
-      if (res.data.success) {
-        setEventTypes(res.data.types || []);
+  // ── 3. Chargement des types d'événements Dolibarr ────────────────────────
+  useEffect(() => {
+    const fetchTypes = async () => {
+      setTypesLoading(true);
+      try {
+        const res = await axios.get(`${API_BACK_URL}/GetDolibarrEventTypes.php?client_id=${id}`);
+        if (res.data.success) setEventTypes(res.data.types || []);
+      } catch (err) {
+        console.error("Erreur récupération types:", err);
+      } finally {
+        setTypesLoading(false);
       }
-    } catch (err) {
-      console.error("Erreur récupération types:", err);
-    } finally {
-      setTypesLoading(false);
-    }
-  };
-  fetchTypes();
-}, [id]); // Ajoutez 'id' ici pour rafraîchir si l'ID change
+    };
+    fetchTypes();
+  }, [id]);
 
-  // ── 3. Auto-remplissage du domaine via l'email ─────────────────────────────
+  // ── 4. Auto-remplissage du domaine via l'email ───────────────────────────
   useEffect(() => {
     if (form.email?.includes("@")) {
       const detectedDomain = form.email.split("@")[1];
       setForm(prev => ({ ...prev, domain: detectedDomain }));
     }
   }, [form.email]);
+
+  // ── Helpers ──────────────────────────────────────────────────────────────
+
+  /** URL complète d'une icône : "tag.svg" → "http://localhost/icons/tag.svg" */
+ const buildIconUrl = (file) => `${ICONS_BASE_URL}?file=${file}`;
+
+  /**
+   * Filtre CSS pour coloriser une icône (SVG ou PNG) selon la couleur de texte
+   * du bouton. Fonctionne parfaitement si l'icône est noire ou blanche sur
+   * fond transparent.
+   *   - fond sombre / texte clair → invert(1) pour icône blanche
+   *   - fond clair  / texte sombre → pas d'inversion (icône sombre)
+   */
+  const getIconFilter = (textColor = "#ffffff") => {
+    const clean = textColor.replace("#", "");
+    if (clean.length < 6) return "brightness(0) invert(1)";
+    const r = parseInt(clean.substring(0, 2), 16);
+    const g = parseInt(clean.substring(2, 4), 16);
+    const b = parseInt(clean.substring(4, 6), 16);
+    const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+    return luminance > 0.5
+      ? "brightness(0)"           // texte sombre → icône sombre
+      : "brightness(0) invert(1)"; // texte clair  → icône blanche
+  };
 
   // ── Handlers ─────────────────────────────────────────────────────────────
   const handleChange = (e) =>
@@ -117,13 +151,13 @@ useEffect(() => {
   const addButton = () =>
     setButtons(prev => [
       ...prev,
-      { 
-        label: "", 
-        bg_color: "#2563eb", 
-        text_color: "#ffffff",
-        icon: "fas fa-tag", 
-        dolibarr_type_code: "" ,
-        allow_linked_events: false // Par défaut non coché
+      {
+        label:               "",
+        bg_color:            "#2563eb",
+        text_color:          "#ffffff",
+        icon:                iconOptions[0]?.file || "tag.svg", // première icône dispo
+        dolibarr_type_code:  "",
+        allow_linked_events: false,
       },
     ]);
 
@@ -132,28 +166,21 @@ useEffect(() => {
       setButtons(prev => prev.filter((_, i) => i !== index));
   };
 
-  // ── SOU MISSION (CORRIGÉE : SANS EVENT_NAME) ──────────────────────────────
+  // ── Soumission ───────────────────────────────────────────────────────────
   const handleSubmit = async (e) => {
     e.preventDefault();
     setMessage("");
-
     try {
-      // Filtrage strict des boutons pour ne garder que les 5 champs + client_id (géré par PHP)
       const cleanButtons = buttons.map(b => ({
-        label: b.label || "Sans nom",
-        bg_color: b.bg_color || "#2563eb",
-        text_color: b.text_color || "#ffffff",
-        icon: b.icon || "fas fa-tag",
-        dolibarr_type_code: b.dolibarr_type_code || null,
-        allow_linked_events : b.allow_linked_events ? 1 : 0 // Par défaut non coché
+        label:               b.label || "Sans nom",
+        bg_color:            b.bg_color  || "#2563eb",
+        text_color:          b.text_color || "#ffffff",
+        icon:                b.icon || "tag.svg",   // stocke juste le nom de fichier
+        dolibarr_type_code:  b.dolibarr_type_code || null,
+        allow_linked_events: b.allow_linked_events ? 1 : 0,
       }));
 
-      const payload = {
-        id,
-        ...form,
-        buttons: cleanButtons
-      };
-
+      const payload = { id, ...form, buttons: cleanButtons };
       const res = await axios.post(`${API_BACK_URL}/updateClient.php`, payload);
 
       if (res.data.success) {
@@ -180,15 +207,15 @@ useEffect(() => {
         <form onSubmit={handleSubmit}>
           <div className="input-grid">
             {[
-              { name: "site_number",      label: "N° de site",                type: "text"  },
+              { name: "site_number",      label: "N° de site",                  type: "text"  },
               { name: "email",            label: "Email Contact",                type: "email" },
-              { name: "dolibarr_url",     label: "URL Dolibarr",                  type: "url"   },
-              { name: "token_url",        label: "URL Token",                     type: "url"   },
+              { name: "dolibarr_url",     label: "URL Dolibarr",                 type: "url"   },
+              { name: "token_url",        label: "URL Token",                    type: "url"   },
               { name: "username",         label: "Nom d'utilisateur",            type: "text"  },
-              { name: "password",         label: "Mot de passe",                  type: "text"  },
+              { name: "password",         label: "Mot de passe",                 type: "text"  },
               { name: "dolibarr_api_key", label: "Clé API Dolibarr",             type: "text"  },
               { name: "domain",           label: "Domaine (ex: entreprise.com)", type: "text"  },
-              { name: "logo",             label: "URL Logo Client",               type: "url"   },
+              { name: "logo",             label: "URL Logo Client",              type: "url"   },
             ].map(({ name, label, type }) => (
               <div className="input-group" key={name}>
                 <label>{label}</label>
@@ -213,6 +240,8 @@ useEffect(() => {
             {buttons.map((btn, index) => (
               <div key={index} className="button-row-container">
                 <div className="button-row">
+
+                  {/* Libellé */}
                   <div className="btn-input">
                     <label>Libellé</label>
                     <input
@@ -222,48 +251,72 @@ useEffect(() => {
                     />
                   </div>
 
+                  {/* ── Icône — select dynamique, zéro code à changer ── */}
                   <div className="btn-input">
                     <label>Icône</label>
+                    {iconsLoading ? (
+                      <select className="icon-select" disabled>
+                        <option>Chargement…</option>
+                      </select>
+                    ) : (
+                      <div style={{ display: "flex", alignItems: "center", gap: "8px" }}>
+                        {/* Aperçu de l'icône sélectionnée */}
+                        {btn.icon && (
+                          <img
+                            src={buildIconUrl(btn.icon)}
+                            alt=""
+                            style={{ width: "22px", height: "22px", opacity: 0.75, flexShrink: 0 }}
+                          />
+                        )}
+                        <select
+                          value={btn.icon}
+                          className="icon-select"
+                          onChange={e => handleButtonChange(index, "icon", e.target.value)}
+                        >
+                          {iconOptions.map(opt => (
+                            <option key={opt.file} value={opt.file}>
+                              {opt.label}
+                            </option>
+                          ))}
+                        </select>
+                      </div>
+                    )}
+                  </div>
+
+                  {/* Type d'événement Dolibarr */}
+                  <div className="btn-input">
+                    <label>Type d'événement Dolibarr</label>
                     <select
-                      value={btn.icon} className="icon-select"
-                      onChange={e => handleButtonChange(index, "icon", e.target.value)}
+                      value={btn.dolibarr_type_code ?? ""}
+                      className="icon-select"
+                      disabled={typesLoading}
+                      onChange={e => handleButtonChange(index, "dolibarr_type_code", e.target.value)}
                     >
-                      {ICON_OPTIONS.map(opt => (
-                        <option key={opt.value} value={opt.value}>{opt.label}</option>
+                      <option value="">
+                        {typesLoading ? "Chargement..." : "-- Sélectionner un type --"}
+                      </option>
+                      {eventTypes.map((t) => (
+                        <option key={t.code} value={t.code}>
+                          {t.label} ({t.code})
+                        </option>
                       ))}
                     </select>
                   </div>
 
+                  {/* Événements liés */}
                   <div className="btn-input">
-                    <label>Type d'événement Dolibarr</label>
-                    <select
-                        value={btn.dolibarr_type_code ?? ""}
-                        className="icon-select"
-                        disabled={typesLoading}
-                        onChange={e => handleButtonChange(index, "dolibarr_type_code", e.target.value)}
-                    >
-                        <option value="">
-                            {typesLoading ? "Chargement..." : "-- Sélectionner un type --"}
-                        </option>
-                        {eventTypes.map((t) => (
-                            <option key={t.code} value={t.code}>
-                                {t.label} ({t.code})
-                            </option>
-                        ))}
-                    </select>
-                </div>
-                <div className="btn-input">
-                  <label>Événements liés?</label>
-                  <label className="checkbox-container">
-                    <input
-                      type="checkbox"
-                      checked={btn.allow_linked_events}
-                      onChange={e => handleButtonChange(index, "allow_linked_events", e.target.checked)}
-                    />
-                    <span className="checkbox-text">Autoriser</span>
-                  </label>
-                </div>
+                    <label>Événements liés?</label>
+                    <label className="checkbox-container">
+                      <input
+                        type="checkbox"
+                        checked={btn.allow_linked_events}
+                        onChange={e => handleButtonChange(index, "allow_linked_events", e.target.checked)}
+                      />
+                      <span className="checkbox-text">Autoriser</span>
+                    </label>
+                  </div>
 
+                  {/* Couleurs */}
                   <div className="btn-input tiny">
                     <label>Fond</label>
                     <input type="color" value={btn.bg_color}
@@ -275,16 +328,31 @@ useEffect(() => {
                       onChange={e => handleButtonChange(index, "text_color", e.target.value)} />
                   </div>
 
+                  {/* Aperçu du bouton final avec icône dynamique */}
                   <div className="btn-preview-mini">
                     <label>Aperçu</label>
-                    <div className="preview-box"
-                      style={{ backgroundColor: btn.bg_color, color: btn.text_color }}>
-                      <i className={btn.icon}
-                        style={{ marginRight: btn.label ? "8px" : "0" }}></i>
+                    <div
+                      className="preview-box"
+                      style={{ backgroundColor: btn.bg_color, color: btn.text_color }}
+                    >
+                      {btn.icon && (
+                        <img
+                          src={buildIconUrl(btn.icon)}
+                          alt=""
+                          style={{
+                            width: "14px",
+                            height: "14px",
+                            marginRight: btn.label ? "6px" : "0",
+                            flexShrink: 0,
+                            filter: getIconFilter(btn.text_color),
+                          }}
+                        />
+                      )}
                       <span>{btn.label || "Bouton"}</span>
                     </div>
                   </div>
 
+                  {/* Suppression */}
                   {buttons.length > 1 && (
                     <button type="button" className="delete-btn"
                       onClick={() => removeButton(index)}>

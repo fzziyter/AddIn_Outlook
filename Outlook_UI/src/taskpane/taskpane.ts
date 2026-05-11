@@ -4,7 +4,6 @@ interface ClientButton {
   id: number;
   client_id: number;
   label: string;
-
   bg_color: string;
   text_color: string;
   icon: string;
@@ -12,7 +11,45 @@ interface ClientButton {
   allow_linked_events: boolean;
 }
 
-const API_BASE_URL = "http://localhost/backend_AddIn";// ─────────────────────────────────────────────
+const API_BASE_URL   = "http://localhost/backend_addin";
+const ICONS_BASE_URL = "http://localhost/icons/cors.php";
+
+// ─────────────────────────────────────────────
+//  ICÔNES
+// ─────────────────────────────────────────────
+
+/**
+ * Retourne le HTML d'une icône depuis le dossier /icons/.
+ * @param iconFile  - nom du fichier ex: "tag.svg" ou "telephone.png"
+ * @param bgColor   - couleur hex du FOND du bouton (pour calculer le contraste)
+ */
+function getIconHtml(iconFile: string | undefined, bgColor: string = "#2563eb"): string {
+  if (!iconFile) {
+    return `<span style="display:inline-block;width:16px;height:16px;"></span>`;
+  }
+  const url    = `${ICONS_BASE_URL}?file=${iconFile}`;
+  const filter = getIconFilter(bgColor);
+  return `<img src="${url}" alt="" style="width:16px; height:16px; filter:${filter}; vertical-align:middle; flex-shrink:0;" />`;
+}
+
+/**
+ * Calcule le filtre CSS pour coloriser une icône selon la luminance du FOND.
+ * - fond clair  → icône sombre  : brightness(0)
+ * - fond sombre → icône blanche : brightness(0) invert(1)
+ */
+function getIconFilter(bgHex: string): string {
+  const clean = bgHex.replace("#", "");
+  if (clean.length < 6) return "brightness(0) invert(1)";
+  const r = parseInt(clean.substring(0, 2), 16);
+  const g = parseInt(clean.substring(2, 4), 16);
+  const b = parseInt(clean.substring(4, 6), 16);
+  const luminance = (0.299 * r + 0.587 * g + 0.114 * b) / 255;
+  return luminance > 0.5
+    ? "brightness(0)"            // fond clair  → icône sombre (visible)
+    : "brightness(0) invert(1)"; // fond sombre → icône blanche (visible)
+}
+
+// ─────────────────────────────────────────────
 //  INIT
 // ─────────────────────────────────────────────
 Office.onReady(() => {
@@ -65,7 +102,7 @@ async function authenticateWithAPI(userEmail: string): Promise<string | null> {
     const data: AuthResponse = await response.json();
     if (data.success && data.session_token) {
       (window as any).__divaSessionToken = data.session_token;
-      (window as any).__divaUserEmail = userEmail;
+      (window as any).__divaUserEmail    = userEmail;
       if (data.user?.logo) displayLogoAvatar(data.user.logo);
       setStatus("ready", data.message || "Utilisateur reconnu");
       return data.session_token;
@@ -107,23 +144,18 @@ async function loadActionButtons(sessionToken: string): Promise<void> {
     buttons.forEach((buttonData) => {
       const button = document.createElement("button");
       button.className = "action-btn";
-      button.setAttribute("data-dolibarr-type-code", buttonData.dolibarr_type_code || "");
-      // Ajout de l'attribut pour la liaison
-      button.setAttribute("data-allow-linked", buttonData.allow_linked_events.toString());
-      
-      button.style.backgroundColor = buttonData.bg_color  || "#2563eb";
-      button.setAttribute("type", "button");
+      button.setAttribute("type",                    "button");
       button.setAttribute("data-label",              buttonData.label);
-    
-      // ── Store icon + type so handleAction can read them ──
-      button.setAttribute("data-icon",               buttonData.icon || "fas fa-tag");
+      button.setAttribute("data-icon",               buttonData.icon || "tag.svg");
       button.setAttribute("data-dolibarr-type-code", buttonData.dolibarr_type_code || "");
-      button.style.backgroundColor = buttonData.bg_color  || "#2563eb";
+      button.setAttribute("data-allow-linked",       buttonData.allow_linked_events.toString());
+      button.style.backgroundColor = buttonData.bg_color   || "#2563eb";
       button.style.color           = buttonData.text_color || "#ffffff";
       button.onclick = () => handleAction(button);
 
+      // ── Filtre calculé sur bg_color (contraste fond/icône) ──
       button.innerHTML = `
-        <div class="btn-icon">${getIconHtml(buttonData.icon)}</div>
+        <div class="btn-icon">${getIconHtml(buttonData.icon, buttonData.bg_color)}</div>
         <span class="btn-title">${buttonData.label || "Action"}</span>
         <span class="btn-arrow">›</span>
       `;
@@ -133,37 +165,6 @@ async function loadActionButtons(sessionToken: string): Promise<void> {
   } catch (err) {
     console.error("[Diva] Erreur récupération boutons :", err);
     actionsContainer.innerHTML = `<div class="error-placeholder">Erreur de chargement des boutons</div>`;
-  }
-}
-
-// ─────────────────────────────────────────────
-//  ICÔNES
-// ─────────────────────────────────────────────
-function getIconHtml(iconClass: string | undefined): string {
-  const key = (iconClass || "fas fa-tag").split(" ").pop()?.replace("fa-", "") || "tag";
-  switch (key) {
-    case "tag":
-      return `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.59 13.41L10.34 3.17A2 2 0 0 0 8.34 2H4c-1.1 0-2 .9-2 2v4.34c0 .53.21 1.04.59 1.41l10.25 10.25c.78.78 2.05.78 2.83 0l4.88-4.88a2 2 0 0 0 0-2.83zM7 7.5A1.5 1.5 0 1 1 8.5 6 1.5 1.5 0 0 1 7 7.5z"/></svg>`;
-    case "link":
-      return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10 13a5 5 0 0 1 7.07 0l1.41 1.41a5 5 0 0 1 0 7.07 5 5 0 0 1-7.07 0L9.35 18.3"/><path d="M14 11a5 5 0 0 0-7.07 0L5.51 12.41a5 5 0 0 0 0 7.07 5 5 0 0 0 7.07 0L14 18.3"/></svg>`;
-    case "star":
-      return `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 17.27L18.18 21l-1.45-6.18L22 9.24l-6.36-.55L12 3 8.36 8.69 2 9.24l5.27 5.58L5.82 21z"/></svg>`;
-    case "heart":
-      return `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 6.42 3.42 5 5.5 5A4.5 4.5 0 0 1 12 9.09 4.5 4.5 0 0 1 18.5 5C20.58 5 22 6.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z"/></svg>`;
-    case "check":
-      return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 6L9 17l-5-5"/></svg>`;
-    case "envelope":
-      return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="2" y="4" width="20" height="16" rx="2"/><polyline points="22,6 12,13 2,6"/></svg>`;
-    case "info-circle":
-      return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`;
-    case "exclamation-triangle":
-      return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>`;
-    case "user":
-      return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/><circle cx="12" cy="7" r="4"/></svg>`;
-    case "shopping-cart":
-      return `<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="21" r="1"/><circle cx="20" cy="21" r="1"/><path d="M1 1h4l2.68 13.39a2 2 0 0 0 2 1.61h9.72a2 2 0 0 0 2-1.61L23 6H6"/></svg>`;
-    default:
-      return `<svg viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M20.59 13.41L10.34 3.17A2 2 0 0 0 8.34 2H4c-1.1 0-2 .9-2 2v4.34c0 .53.21 1.04.59 1.41l10.25 10.25c.78.78 2.05.78 2.83 0l4.88-4.88a2 2 0 0 0 0-2.83zM7 7.5A1.5 1.5 0 1 1 8.5 6 1.5 1.5 0 0 1 7 7.5z"/></svg>`;
   }
 }
 
@@ -253,7 +254,7 @@ function displayNoEmail(): void {
 // ─────────────────────────────────────────────
 interface AttachmentData {
   name: string;
-  content: string; // base64
+  content: string;
   contentType: string;
   size: number;
 }
@@ -293,8 +294,9 @@ function getAttachments(): Promise<AttachmentData[]> {
     });
   });
 }
+
 // ─────────────────────────────────────────────
-//  VÉRIFICATION TIERS (expéditeur = client ?)
+//  VÉRIFICATION TIERS
 // ─────────────────────────────────────────────
 interface TiersCheckResponse {
   status: string;
@@ -324,7 +326,7 @@ async function checkSenderIsClient(
 async function handleAction(btn: HTMLButtonElement): Promise<void> {
   const actionLabel  = btn.getAttribute("data-label")              || "Action";
   const dolibarrType = btn.getAttribute("data-dolibarr-type-code") || null;
-  const allowLinked  = btn.getAttribute("data-allow-linked") === "1"; // Détection du mode lié
+  const allowLinked  = btn.getAttribute("data-allow-linked") === "1";
   const sessionToken = (window as any).__divaSessionToken;
   const emailInfo    = getEmailInfo();
   const item         = Office.context.mailbox?.item;
@@ -342,32 +344,29 @@ async function handleAction(btn: HTMLButtonElement): Promise<void> {
     }
 
     const tiersId = tiersCheck.id || null;
-    
-    // LOGIQUE DE NAVIGATION :
+    setStatus("ready", "Client vérifié ✓"); 
+
     if (allowLinked && tiersId) {
-      // Si la liaison est autorisée, on affiche la modale de choix
-      showSelectionModal(btn, tiersId ,sessionToken);
+      showSelectionModal(btn, tiersId, sessionToken);
     } else {
-      // Sinon, on procède à la création directe (logique existante)
       processCreateNewEvent(btn, tiersId);
     }
-
   } catch (err) {
     setStatus("error", "Erreur de vérification");
   }
 }
+
 async function showSelectionModal(btn: HTMLButtonElement, tiersId: number, sessionToken: string) {
   const actionsContainer = document.getElementById("actions");
   if (!actionsContainer) return;
 
-  // On vide et on applique un style de base au conteneur
   actionsContainer.innerHTML = `
     <div style="padding: 20px; font-family: 'Segoe UI', system-ui, sans-serif; color: #323130; background: #faf9f8; min-height: 100vh;">
-      
+
       <button onclick="location.reload()" style="border:none; background:none; color:#0078d4; cursor:pointer; font-size:13px; font-weight:600; padding:0; margin-bottom:20px; display:flex; align-items:center; gap:5px;">
-         <span style="font-size:18px;">←</span> Retour aux actions
+        <span style="font-size:18px;">←</span> Retour aux actions
       </button>
-      
+
       <button id="opt-new" style="width:100%; padding:14px; background:#0078d4; color:white; border:none; border-radius:6px; font-weight:600; font-size:14px; cursor:pointer; margin-bottom:25px; box-shadow: 0 4px 6px rgba(0,120,212,0.2); transition: all 0.2s;">
         + Créer un nouvel événement
       </button>
@@ -380,10 +379,9 @@ async function showSelectionModal(btn: HTMLButtonElement, tiersId: number, sessi
 
       <div style="background: #ffffff; padding: 15px; border-radius: 8px; border: 1px solid #edebe9;">
         <label style="display:block; font-size:12px; font-weight:600; color:#605e5c; margin-bottom:8px;">Événements récents du client</label>
-        <select id="event-dropdown" style="width:100%; padding:12px; border:1px solid #d2d0ce; border-radius:4px; font-size:14px; background:#fff; color:#323130; outline:none; margin-bottom:15px; appearance: none; background-image: url('data:image/svg+xml;charset=US-ASCII,<svg%20xmlns%3D%22http%3A%2F%2Fwww.w3.org%2F2000%2Fsvg%22%20width%3D%2224%22%20height%3D%2224%22%20viewBox%3D%220%200%2024%2024%22%20fill%3D%22none%22%20stroke%3D%22%23605e5c%22%20stroke-width%3D%222%22%20stroke-linecap%3D%22round%22%20stroke-linejoin%3D%22round%22%3E<polyline%20points%3D%226%209%2012%2015%2018%209%22%3E<%2Fpolyline><%2Fsvg>'); background-repeat: no-repeat; background-position: right 10px top 50%; background-size: 16px;">
+        <select id="event-dropdown" style="width:100%; padding:12px; border:1px solid #d2d0ce; border-radius:4px; font-size:14px; background:#fff; color:#323130; outline:none; margin-bottom:15px;">
           <option value="">Chargement...</option>
         </select>
-        
         <button id="btn-link-submit" disabled style="width:100%; padding:12px; background:#f3f2f1; color:#a19f9d; border:none; border-radius:4px; font-weight:600; font-size:14px; cursor:not-allowed; transition: all 0.3s;">
           Lier à cet événement
         </button>
@@ -392,21 +390,19 @@ async function showSelectionModal(btn: HTMLButtonElement, tiersId: number, sessi
     </div>
   `;
 
-  const dropdown = document.getElementById("event-dropdown") as HTMLSelectElement;
+  const dropdown  = document.getElementById("event-dropdown")  as HTMLSelectElement;
   const submitBtn = document.getElementById("btn-link-submit") as HTMLButtonElement;
 
   document.getElementById("opt-new")!.onclick = () => processCreateNewEvent(btn, tiersId);
-
-  // Animation simple au survol du bouton "Nouveau"
   const btnNew = document.getElementById("opt-new") as HTMLButtonElement;
   btnNew.onmouseover = () => btnNew.style.backgroundColor = "#005a9e";
-  btnNew.onmouseout = () => btnNew.style.backgroundColor = "#0078d4";
+  btnNew.onmouseout  = () => btnNew.style.backgroundColor = "#0078d4";
 
   try {
     const response = await fetch(`${API_BASE_URL}/evenement/getTiersEvents.php`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ session_token: sessionToken, socid: tiersId })
+      body: JSON.stringify({ session_token: sessionToken, socid: tiersId }),
     });
     const data = await response.json();
 
@@ -423,20 +419,17 @@ async function showSelectionModal(btn: HTMLButtonElement, tiersId: number, sessi
         if (dropdown.value !== "") {
           submitBtn.disabled = false;
           submitBtn.style.backgroundColor = "#0078d4";
-          submitBtn.style.color = "white";
-          submitBtn.style.cursor = "pointer";
-          submitBtn.style.boxShadow = "0 2px 4px rgba(0,0,0,0.1)";
+          submitBtn.style.color           = "white";
+          submitBtn.style.cursor          = "pointer";
         } else {
           submitBtn.disabled = true;
           submitBtn.style.backgroundColor = "#f3f2f1";
-          submitBtn.style.color = "#a19f9d";
-          submitBtn.style.cursor = "not-allowed";
+          submitBtn.style.color           = "#a19f9d";
+          submitBtn.style.cursor          = "not-allowed";
         }
       };
 
-      submitBtn.onclick = () => {
-        processCreateNewEvent(btn, tiersId, parseInt(dropdown.value));
-      };
+      submitBtn.onclick = () => processCreateNewEvent(btn, tiersId, parseInt(dropdown.value));
     } else {
       dropdown.innerHTML = '<option value="">Aucun événement trouvé</option>';
     }
@@ -445,14 +438,17 @@ async function showSelectionModal(btn: HTMLButtonElement, tiersId: number, sessi
   }
 }
 
-// Fonction isolée pour la création finale (récupérée de votre logique handleAction initiale)
-async function processCreateNewEvent(btn: HTMLButtonElement, tiersId: number | null, parentId: number | null = null): Promise<void> {
-  const actionLabel = btn.getAttribute("data-label")!;
+async function processCreateNewEvent(
+  btn: HTMLButtonElement,
+  tiersId: number | null,
+  parentId: number | null = null
+): Promise<void> {
+  const actionLabel  = btn.getAttribute("data-label")!;
   const dolibarrType = btn.getAttribute("data-dolibarr-type-code");
   const sessionToken = (window as any).__divaSessionToken;
-  const userEmail = (window as any).__divaUserEmail;
-  const emailInfo = getEmailInfo();
-  const item = Office.context.mailbox.item;
+  const userEmail    = (window as any).__divaUserEmail;
+  const emailInfo    = getEmailInfo();
+  const item         = Office.context.mailbox.item;
 
   if (!item) return;
 
@@ -460,16 +456,16 @@ async function processCreateNewEvent(btn: HTMLButtonElement, tiersId: number | n
     if (result.status === Office.AsyncResultStatus.Succeeded) {
       const attachments = await getAttachments();
       const payload = {
-        session_token: sessionToken,
-        user_email: userEmail,
-        sender_email: emailInfo?.senderEmail,
-        subject: emailInfo?.subject,
-        email_body: btoa(unescape(encodeURIComponent(result.value))),
-        action_label: actionLabel,
+        session_token:      sessionToken,
+        user_email:         userEmail,
+        sender_email:       emailInfo?.senderEmail,
+        subject:            emailInfo?.subject,
+        email_body:         btoa(unescape(encodeURIComponent(result.value))),
+        action_label:       actionLabel,
         dolibarr_type_code: dolibarrType,
-        attachments: attachments,
-        socid: tiersId,
-        parent_event_id: parentId // Optionnel : pour lier à l'événement sélectionné
+        attachments:        attachments,
+        socid:              tiersId,
+        parent_event_id:    parentId,
       };
 
       try {
@@ -481,7 +477,7 @@ async function processCreateNewEvent(btn: HTMLButtonElement, tiersId: number | n
         });
         const data = await response.json();
         if (data.success) setStatus("ready", "Événement traité !");
-        else setStatus("error", data.error || "Échec");
+        else              setStatus("error", data.error || "Échec");
       } catch (err) {
         setStatus("error", "Erreur réseau");
       }

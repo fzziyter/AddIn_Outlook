@@ -1,0 +1,12 @@
+[
+  { "label": "Étiquette",   "file": "tag.svg" },
+  { "label": "Utilisateur", "file": "user.svg" },
+  { "label": "Panier",      "file": "shopping-cart.svg" },
+  { "label": "Info",        "file": "info-circle.svg" },
+  { "label": "Check",       "file": "check.svg" },
+  { "label": "Lien",        "file": "link.svg" },
+  { "label": "Étoile",      "file": "star.svg" },
+  { "label": "Cœur",        "file": "heart.svg" },
+  { "label": "Téléphone",   "file": "telephone.svg" }
+]
+
