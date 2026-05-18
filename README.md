@@ -1,97 +1,388 @@
-# 🚀 Guide de mise en place — Projet Outlook Add-in & Dolibarr
+# 🚀 Projet Outlook Add-in & Dolibarr
 
-Ce guide explique comment installer et configurer les trois composants principaux du projet : le complément Outlook, les services backend (PHP) et le portail d'administration.
-
----
-
-## 📋 Pré-requis
-
-- **Node.js** (v16+)
-- **Serveur PHP** (WAMP, XAMPP, Laragon ou PHP local)
-- **Base de données** MySQL
-- **Instance Dolibarr** active avec le module API REST activé
+> Intégration complète entre **Dolibarr ERP/CRM** et **Microsoft 365 Outlook** via un complément Office.js, une API PHP centralisée et une interface d’administration React.
+Ce guide explique comment installer et configurer les  composants principaux du projet :
 
 ---
 
-## 1. 📂 Backend : Configuration des services (PHP)
+# 📦 Architecture Globale
 
-Le backend est divisé en deux services distincts à héberger sur votre serveur web (ex : `htdocs` ou `www`).
-
-### A. Backend Add-in (liaison Dolibarr)
-
-Ce dossier gère la logique métier entre Outlook et Dolibarr.
-
-1. Placez le dossier `backend_AddIn` sur votre serveur PHP.
-2. Ouvrez le fichier `config.php`.
-3. Configurez les variables suivantes avec vos accès Dolibarr :
-   - URL de l'instance Dolibarr
-   - Clé API (token) de l'administrateur Dolibarr
-
-### B. Backend Admin (base de données interne)
-
-Ce dossier gère l'authentification et la configuration du panel d'administration.
-
-1. Placez le dossier `backend_admin` sur votre serveur PHP.
-2. Créez une base de données **MySQL**.
-3. Modifiez le fichier `backend_admin/db.php` avec vos identifiants de connexion (`host`, `dbname`, `user`, `password`).
-4. **Note importante :** relevez l'URL de ce service (ex : `http://localhost/backend_admin/`) pour l'étape suivante.
+```text
+.
+├── backend_admin/      → API centrale + accès BDD
+├── backend_AddIn/      → API métier Outlook
+├── frontend_admin/     → Dashboard React
+├── Outlook_UI/         → Add-in Outlook Office.js
+└── icons/              → Assets + CORS
+```
 
 ---
 
-## 2. 🛡️ Frontend : Interface d'administration (React)
+# 📋 Pré-requis Système
 
-Ce tableau de bord permet de gérer la configuration globale du système.
+Avant de commencer, assurez-vous d’avoir installé :
+
+| Outil | Version recommandée |
+| --- | --- |
+| Node.js | ≥ 16.x |
+| PHP | ≥ 8.x |
+| Composer | Dernière version |
+| MySQL  | ≥ 5.7 |
+| Serveur Web | Apache / Nginx |
+
+### Environnements compatibles
+
+- WAMP
+- XAMPP
+- Laragon
+- Docker
+- Apache/Nginx Linux
+
+---
+
+# 🗂️ Déploiement Backend (PHP)
+
+ :
+
+```text
+/
+│
+├── backend_admin/
+├── backend_AddIn/
+└── icons/
+```
+
+---
+
+# 1️⃣ Backend Admin — API Centrale
+
+Le module `backend_admin` :
+
+- centralise l’accès aux données
+- initialise PDO
+- protège les variables sensibles via `.env`
+- expose les endpoints d’administration
+
+---
+
+## 📥 Installation
+
+Positionnez-vous dans le dossier :
+
+```bash
+cd backend_admin
+```
+
+Installez les dépendances PHP :
+
+```bash
+composer install
+```
+
+---
+
+## ⚙️ Configuration `.env`
+
+Dupliquez :
+
+```text
+.env.example
+```
+
+en :
+
+```text
+.env
+```
+
+Puis configurez :
+
+```env
+DB_HOST=localhost
+DB_NAME=votre_base_de_donnees
+DB_USER=root
+DB_PASSWORD=votre_mot_de_passe
+```
+
+---
+
+## 🔌 Fonctionnement Interne
+
+Le fichier :
+
+```php
+backend_admin/db.php
+```
+
+charge automatiquement :
+
+- les variables d’environnement
+- la connexion PDO
+- la configuration globale
+
+---
+
+# 2️⃣ Backend Add-In — API Outlook
+
+Le module `backend_AddIn` gère :
+
+- authentification Outlook
+- synchronisation des événements
+- mapping des tiers
+- logique métier Dolibarr
+
+---
+
+## 🔗 Mutualisation de la connexion BDD
+
+Le backend Add-In réutilise directement la connexion PDO du backend principal :
+
+```php
+require_once __DIR__ . '/../backend_admin/db.php';
+```
+
+---
+
+## ✅ Important
+
+Les dossiers :
+
+```text
+backend_admin
+backend_AddIn
+```
+
+doivent impérativement partager le même dossier parent.
+
+---
+
+# 🛡️ Frontend Admin — Dashboard React
+
+Interface d’administration et de supervision du système.
+
+---
+
+## 📥 Installation
 
 ```bash
 cd frontend_admin
-
-# 1. Installer les dépendances
 npm install
+```
 
-# 2. Configurer le lien API
-# Créez ou modifiez le fichier .env et ajoutez :
-# REACT_APP_API_URL=http://votre-lien-backend-admin/
+---
 
-# 3. Lancer l'application
+## ⚙️ Configuration `.env`
+
+Créer :
+
+```text
+frontend_admin/.env
+```
+
+Ajouter :
+
+```env
+REACT_APP_API_URL=http://localhost/backend_admin/
+REACT_APP_ICONS_BASE_URL=http://localhost/icons/cors.php
+```
+
+---
+
+## ▶️ Démarrage
+
+```bash
 npm start
 ```
 
 ---
 
-## 3. 📧 Frontend : Complément Outlook UI (Office.js)
+## 💡 Important
 
-Cette interface sera injectée directement dans Microsoft Outlook.
+Les variables :
+
+```text
+REACT_APP_*
+```
+
+sont injectées au build React.
+
+Après modification du `.env` :
+
+🔁 redémarrez toujours `npm start`.
+
+---
+
+# 📧 Outlook UI — Add-in Office.js
+
+Application embarquée directement dans Microsoft Outlook.
+
+---
+
+## ⚙️ Configuration API
+
+Dans :
+
+```text
+src/taskpane/taskpane.ts
+```
+
+Configurer :
+
+```typescript
+const API_BASE_URL   = "http://localhost/backend_addin";
+const ICONS_BASE_URL = "http://localhost/icons/cors.php";
+```
+
+---
+
+## 📥 Installation & lancement
 
 ```bash
 cd Outlook_UI
 
-# 1. Installer les dépendances
 npm install
-
-# 2. Démarrer le serveur local (HTTPS par défaut)
 npm start
 ```
 
-### Chargement dans Outlook
+---
 
-1. Ouvrez https://outlook.office.com/
-2. Créez un **Nouveau message**
-3. Cliquez sur l'icône **Compléments** (ou les trois points `...`)
-4. Choisissez **Gérer les compléments > Mes compléments**
-5. Cliquez sur **Ajouter un complément personnalisé > Ajouter à partir d’un fichier**
-6. Sélectionnez le fichier `manifest.xml` situé à la racine du dossier `Outlook_UI`
+## 🔒 Sécurité HTTPS
+
+Le serveur local Office.js utilise HTTPS automatiquement.
+
+Cela est obligatoire pour :
+
+- Outlook Desktop
+- Outlook Web
+- Microsoft 365
 
 ---
 
-## 📊 Résumé des flux
+# 📨 Chargement du Complément Outlook (Sideloading)
 
-| Composant          | Rôle                          | Configuration clé |
-|-------------------|------------------------------|------------------|
-| **Outlook_UI**     | Interface utilisateur Add-in | `manifest.xml`   |
-| **Backend_AddIn**  | Pont API Dolibarr           | `config.php`     |
-| **Backend_Admin**  | Gestion DB & sécurité       | `db.php`         |
-| **Frontend_Admin** | Panel de gestion            | `.env`           |
+## Étapes
+
+1. Ouvrir Outlook Web
+2. Créer ou ouvrir un mail
+3. Cliquer sur :
+
+```text
+Compléments
+```
+
+ou :
+
+```text
+...
+→ Obtenir des compléments
+```
+
+4. Aller dans :
+
+```text
+Mes compléments
+```
+
+5. Descendre jusqu’à :
+
+```text
+Compléments personnalisés
+```
+
+6. Cliquer :
+
+```text
+Ajouter un complément personnalisé
+```
+
+7. Sélectionner :
+
+```text
+Outlook_UI/manifest.xml
+```
 
 ---
 
-*Développé dans le cadre de l'intégration Dolibarr × Microsoft 365 Outlook.*
+# 📊 Matrice des Composants
+
+| Composant | Type | Fonction |
+| --- | --- | --- |
+| `Outlook_UI` | Office.js Client | Interface Outlook |
+| `frontend_admin` | React SPA | Dashboard administrateur |
+| `backend_admin` | API PHP | Gestion BDD & administration |
+| `backend_AddIn` | API PHP | Logique métier Outlook |
+| `icons` | Serveur statique | Gestion des assets & CORS |
+
+---
+
+# 🔄 Flux d’Interaction
+
+```text
+Outlook_UI
+    ↓
+backend_AddIn
+    ↓
+backend_admin
+    ↓
+MySQL
+
+frontend_admin
+    ↓
+backend_admin
+```
+
+---
+
+# 🧪 Conseils de Debug
+
+## Vérifier et adapter  les APIs selon vos chemins et ports
+
+Tester :
+
+```text
+http://localhost/backend_admin/
+http://localhost/backend_AddIn/
+```
+
+---
+
+## Vérifier HTTPS Office.js
+
+Si Outlook refuse le complément :
+
+- vérifier le certificat local
+- vérifier que `npm start` est actif
+
+---
+
+## Vérifier CORS
+
+Tester :
+
+```text
+http://localhost/icons/cors.php
+```
+
+---
+
+# 🏗️ Stack Technique
+
+| Technologie | Usage |
+| --- | --- |
+| React | Frontend Admin |
+| TypeScript | Outlook Add-in |
+| Office.js | Intégration Outlook |
+| PHP | APIs Backend |
+| PDO | Accès MySQL |
+| dotenv | Variables d’environnement |
+| MySQL | Base de données |
+
+---
+
+# 👨‍💻 Projet
+
+Développé dans le cadre de l’intégration :
+
+## Dolibarr ERP/CRM × Microsoft 365 Outlook
+
+---
