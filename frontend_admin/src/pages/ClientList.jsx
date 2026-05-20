@@ -106,10 +106,7 @@ function ClientList() {
                       Lien Dolibarr
                     </a>
                   </div>
-                  <div>
-                    <small>Token:</small>{" "}
-                    <span className="url-text">{client.token_url}</span>
-                  </div>
+                  
                 </td>
                 <td>
                   <code className="api-key-display">

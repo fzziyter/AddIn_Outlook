@@ -10,7 +10,7 @@ export default function Dashboard() {
   const [stats, setStats] = useState({
     total: 0,
     recent: [],
-    lastAdded: ""
+    recentAdded: "Aucun" // 👈 Corrigé pour correspondre à l'état initial
   });
   const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
@@ -23,8 +23,13 @@ export default function Dashboard() {
         
         setStats({
           total: data.length,
-          recent: data.slice(-5).reverse(), // Les 5 derniers ajoutés
-          lastAdded: data.length > 0 ? data[data.length - 1].domain : "Aucun"
+          
+          // 1. Puisque l'API donne déjà du plus récent au plus ancien,
+          // on prend simplement les 5 premiers éléments pour la table.
+          recent: data.slice(0, 5), 
+          
+          // 2. 👇 LE PLUS NOUVEAU CLIENT : Il est à l'index 0 grâce au ORDER BY id DESC
+          recentAdded: data.length > 0 ? data[0].domain : "Aucun"
         });
         setLoading(false);
       } catch (error) {
@@ -54,11 +59,12 @@ export default function Dashboard() {
           </div>
         </div>
 
+        {/* ── CARD VERTE CORRIGÉE SANS SANS CHANGEMENT DE CLASSE ── */}
         <div className="stat-card green">
           <div className="stat-icon">✨</div>
           <div className="stat-info">
             <span className="stat-label">Dernier Client</span>
-            <span className="stat-value">{stats.lastAdded}</span>
+            <span className="stat-value">{stats.recentAdded}</span>
           </div>
         </div>
 
@@ -112,7 +118,6 @@ export default function Dashboard() {
             <button className="action-btn primary" onClick={() => navigate("/add-client")}>
               <span>+</span> Nouveau Client
             </button>
-            
           </div>
         </div>
       </div>
