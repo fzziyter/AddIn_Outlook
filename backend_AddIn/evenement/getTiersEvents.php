@@ -3,8 +3,10 @@ header("Access-Control-Allow-Origin: *");
 header("Access-Control-Allow-Methods: POST, OPTIONS");
 header("Access-Control-Allow-Headers: Content-Type");
 header("Content-Type: application/json");
-ini_set('display_errors', 0);  // ← ajoute cette ligne
-error_reporting(0);             // ← et celle-ci
+
+ini_set('display_errors', 0);
+error_reporting(0);
+
 if ($_SERVER['REQUEST_METHOD'] === 'OPTIONS') {
     http_response_code(200);
     exit;
@@ -15,6 +17,7 @@ include(__DIR__ . "/../../backend_admin/db.php");
 $data = json_decode(file_get_contents("php://input"), true);
 $socid = $data['socid'] ?? null;
 $session_token = $data['session_token'] ?? null;
+$show_all = $data['show_all'] ?? false; 
 
 if (!$socid || !$session_token) {
     echo json_encode(["success" => false, "error" => "socid ou session_token manquant"]);
@@ -34,8 +37,7 @@ if (!$client) {
 $baseUrl = rtrim($client['dolibarr_url'], '/');
 $apiKey = $client['dolibarr_api_key'];
 
-// 2. Construction du filtre pour l'API
-// On filtre sur 'socid' car c'est le champ présent dans votre exemple JSON
+// 2. Filtre de base : lié uniquement au tiers (socid) pour éviter toute erreur SQL de Dolibarr
 $filters = rawurlencode("(t.fk_soc:=:" . $socid . ")");
 $apiUrl = $baseUrl . "/api/index.php/agendaevents?sortfield=t.datep&sortorder=DESC&limit=100&sqlfilters=" . $filters;
 
@@ -55,21 +57,29 @@ curl_close($ch);
 if ($httpCode === 200) {
     $events = json_decode($response, true);
     
-    // Si l'API renvoie un objet d'erreur au lieu d'une liste
     if (isset($events['error'])) {
         echo json_encode(["success" => true, "events" => []]);
         exit;
     }
 
-    // 3. Formatage pour le frontend Outlook
-    $formattedEvents = array_map(function($ev) {
-        return [
-            "id"    => $ev['id'],
-            "label" => $ev['label'],
-            // Utilisation de datep (timestamp) comme dans votre exemple
+    $formattedEvents = [];
+
+    // 3. Filtrage intelligent et formatage en PHP
+    foreach ($events as $ev) {
+        $percentage = isset($ev['percentage']) ? (int)$ev['percentage'] : 0;
+
+        // SI la case n'est PAS cochée, on ignore les événements terminés (100%)
+        if (!$show_all && $percentage >= 100) {
+            continue; // On passe à l'événement suivant sans l'ajouter
+        }
+
+        // Sinon, on l'ajoute à la liste des résultats
+        $formattedEvents[] = [
+            "id"         => $ev['id'],
+            "label"      => $ev['label'] ?? $ev['title'] ?? 'Sans titre',
             "date_event" => isset($ev['datep']) ? date('Y-m-d', $ev['datep']) : null 
         ];
-    }, $events);
+    }
 
     echo json_encode(["success" => true, "events" => $formattedEvents]);
 } else {

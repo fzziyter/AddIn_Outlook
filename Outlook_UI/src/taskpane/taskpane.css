@@ -210,7 +210,7 @@ body {
 ════════════════════════════════════════ */
 .main {
   flex: 1;
-  overflow: hidden;
+  overflow: hidden; /* Garde le conteneur parent fixe */
   display: flex;
   flex-direction: column;
   gap: 8px;
@@ -225,7 +225,7 @@ body {
   border-left: 3px solid var(--blue-500);
   border-radius: var(--radius-lg);
   padding: 10px 12px 10px 14px;
-  flex-shrink: 0;
+  flex-shrink: 0; /* Empêche la carte email de s'écraser */
   box-shadow: var(--shadow-sm);
 }
 
@@ -284,7 +284,8 @@ body {
   flex: 1;
   display: flex;
   flex-direction: column;
-  min-height: 0;
+  min-height: 0;   /* TRÈS IMPORTANT : permet au flex enfant de scroller */
+  overflow: hidden; 
 }
 
 .actions-label {
@@ -299,8 +300,13 @@ body {
 .actions-grid {
   display: flex;
   flex-direction: column;
-  gap: 5px;
+  gap: 6px;        /* Léger espace entre les boutons */
   flex: 1;
+  
+  /* ── LES LIGNES MAGIQUES POUR LE SCROLL ── */
+  overflow-y: auto;  /* Déclenche le scroll vertical si ça dépasse */
+  overflow-x: hidden;/* Évite un scroll horizontal parasite */
+  padding-right: 4px;/* Éite que la scrollbar colle trop aux flèches des boutons */
 }
 
 /* ── Boutons  */

@@ -360,82 +360,272 @@ async function showSelectionModal(btn: HTMLButtonElement, tiersId: number, sessi
   const actionsContainer = document.getElementById("actions");
   if (!actionsContainer) return;
 
-  actionsContainer.innerHTML = `
-    <div style="padding: 20px; font-family: 'Segoe UI', system-ui, sans-serif; color: #323130; background: #faf9f8; min-height: 100vh;">
+  // 1. Injection du HTML initial avec la case à cocher intégrée
+ actionsContainer.innerHTML = `
+  <style>
+    .panel-container {
+      padding: 24px 16px; 
+      font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; 
+      color: #242424; 
+      min-height: 100vh; 
+      box-sizing: border-box;
+    }
 
-      <button onclick="location.reload()" style="border:none; background:none; color:#0078d4; cursor:pointer; font-size:13px; font-weight:600; padding:0; margin-bottom:20px; display:flex; align-items:center; gap:5px;">
-        <span style="font-size:18px;">←</span> Retour aux actions
-      </button>
+    /* Bouton Retour */
+    .btn-back {
+      border: none; 
+      background: none; 
+      color: #0078d4; 
+      cursor: pointer; 
+      font-size: 13px; 
+      font-weight: 600; 
+      padding: 0; 
+      margin-bottom: 24px; 
+      display: flex; 
+      align-items: center; 
+      gap: 6px; 
+      transition: all 0.2s ease;
+    }
+    .btn-back:hover {
+      color: #005a9e;
+      transform: translateX(-2px);
+    }
 
-      <button id="opt-new" style="width:100%; padding:14px; background:#0078d4; color:white; border:none; border-radius:6px; font-weight:600; font-size:14px; cursor:pointer; margin-bottom:25px; box-shadow: 0 4px 6px rgba(0,120,212,0.2); transition: all 0.2s;">
-        + Créer un nouvel événement
-      </button>
+    /* Bouton Créer Principal */
+    .btn-primary {
+      width: 100%; 
+      padding: 13px 20px; 
+      background: #0078d4; 
+      color: #ffffff; 
+      border: none; 
+      border-radius: 6px; 
+      font-weight: 600; 
+      font-size: 14px; 
+      cursor: pointer; 
+      margin-bottom: 24px; 
+      box-shadow: 0 2px 4px rgba(0, 120, 212, 0.15); 
+      transition: all 0.2s ease;
+    }
+    .btn-primary:hover {
+      background: #005a9e;
+      box-shadow: 0 4px 8px rgba(0, 120, 212, 0.25);
+    }
+    .btn-primary:active {
+      transform: scale(0.98);
+    }
 
-      <div style="display:flex; align-items:center; margin-bottom:20px;">
-        <div style="flex:1; border-bottom:1px solid #edebe9;"></div>
-        <span style="padding:0 15px; color:#a19f9d; font-size:11px; font-weight:700; text-transform:uppercase;">Ou lier à l'existant</span>
-        <div style="flex:1; border-bottom:1px solid #edebe9;"></div>
-      </div>
+    /* Séparateur textuel */
+    .divider-container {
+      display: flex; 
+      align-items: center; 
+      margin-bottom: 24px;
+    }
+    .divider-line {
+      flex: 1; 
+      border-bottom: 1px solid #e0e0e0;
+    }
+    .divider-text {
+      padding: 0 12px; 
+      color: #616161; 
+      font-size: 11px; 
+      font-weight: 600; 
+      text-transform: uppercase; 
+      letter-spacing: 0.5px;
+    }
 
-      <div style="background: #ffffff; padding: 15px; border-radius: 8px; border: 1px solid #edebe9;">
-        <label style="display:block; font-size:12px; font-weight:600; color:#605e5c; margin-bottom:8px;">Événements récents du client</label>
-        <select id="event-dropdown" style="width:100%; padding:12px; border:1px solid #d2d0ce; border-radius:4px; font-size:14px; background:#fff; color:#323130; outline:none; margin-bottom:15px;">
-          <option value="">Chargement...</option>
-        </select>
-        <button id="btn-link-submit" disabled style="width:100%; padding:12px; background:#f3f2f1; color:#a19f9d; border:none; border-radius:4px; font-weight:600; font-size:14px; cursor:not-allowed; transition: all 0.3s;">
-          Lier à cet événement
-        </button>
-      </div>
+    /* Carte de liaison */
+    .card {
+      background: #ffffff; 
+      padding: 24px; 
+      border-radius: 8px; 
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.04), 0 1px 2px rgba(0, 0, 0, 0.03); 
+      border: 1px solid #e0e0e0;
+    }
 
+    /* Checkbox & Labels */
+    .checkbox-label {
+      display: flex; 
+      align-items: center; 
+      gap: 10px; 
+      margin-bottom: 20px; 
+      font-size: 13px; 
+      color: #242424; 
+      cursor: pointer; 
+      user-select: none;
+    }
+    .checkbox-input {
+      width: 16px; 
+      height: 16px; 
+      accent-color: #0078d4; 
+      cursor: pointer; 
+      margin: 0; 
+      border: 1px solid #8a8886; 
+      border-radius: 3px;
+    }
+    .field-label {
+      display: block; 
+      font-size: 12px; 
+      font-weight: 600; 
+      color: #424242; 
+      margin-bottom: 8px;
+    }
+
+    /* Select Dropdown */
+    .select-input {
+      width: 100%; 
+      padding: 10px 12px; 
+      border: 1px solid #adadad; 
+      border-radius: 6px; 
+      font-size: 13px; 
+      font-family: inherit; 
+      background: #ffffff; 
+      color: #242424; 
+      outline: none; 
+      margin-bottom: 24px; 
+      cursor: pointer; 
+      transition: all 0.2s ease; 
+      box-sizing: border-box;
+    }
+    .select-input:focus {
+      border-color: #0078d4;
+      box-shadow: 0 0 0 2px rgba(0, 120, 212, 0.2);
+    }
+
+    /* Bouton Soumettre / Lier */
+    .btn-submit {
+      width: 100%; 
+      padding: 13px; 
+      background: #0078d4; 
+      color: #ffffff; 
+      border: 1px solid transparent; 
+      border-radius: 6px; 
+      font-weight: 600; 
+      font-size: 14px; 
+      cursor: pointer; 
+      transition: all 0.2s ease;
+    }
+    .btn-submit:hover:not(:disabled) {
+      background: #005a9e;
+    }
+    .btn-submit:disabled {
+      background: #f0f0f0; 
+      color: #a19f9d; 
+      border-color: #e0e0e0; 
+      cursor: not-allowed;
+    }
+  </style>
+
+  <div class="panel-container">
+    
+    <button onclick="location.reload()" class="btn-back">
+      <span>←</span> Retour aux actions
+    </button>
+
+    <button id="opt-new" class="btn-primary">
+      + Créer un nouvel événement
+    </button>
+
+    <div class="divider-container">
+      <div class="divider-line"></div>
+      <span class="divider-text">Ou lier à l'existant</span>
+      <div class="divider-line"></div>
     </div>
-  `;
+    
+    <div class="card">
+      
+      <label class="checkbox-label">
+        <input type="checkbox" id="show-all-events" class="checkbox-input" />
+        <span style="font-weight: 500;">Inclure les événements terminés</span>
+      </label>
 
-  const dropdown  = document.getElementById("event-dropdown")  as HTMLSelectElement;
-  const submitBtn = document.getElementById("btn-link-submit") as HTMLButtonElement;
+      <label class="field-label">Événements récents du client</label>
+      
+      <select id="event-dropdown" class="select-input">
+        <option value="">Chargement...</option>
+      </select>
+      
+      <button id="btn-link-submit" disabled class="btn-submit">
+        Lier à cet événement
+      </button>
+    </div>
 
+  </div>
+`;
+
+  const dropdown      = document.getElementById("event-dropdown") as HTMLSelectElement;
+  const submitBtn     = document.getElementById("btn-link-submit") as HTMLButtonElement;
+  const checkboxShowAll = document.getElementById("show-all-events") as HTMLInputElement;
+
+  // Configuration du bouton de création d'événement classique
   document.getElementById("opt-new")!.onclick = () => processCreateNewEvent(btn, tiersId);
   const btnNew = document.getElementById("opt-new") as HTMLButtonElement;
   btnNew.onmouseover = () => btnNew.style.backgroundColor = "#005a9e";
   btnNew.onmouseout  = () => btnNew.style.backgroundColor = "#0078d4";
 
-  try {
-    const response = await fetch(`${API_BASE_URL}/evenement/getTiersEvents.php`, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ session_token: sessionToken, socid: tiersId }),
-    });
-    const data = await response.json();
+  // 2. Fonction isolée pour charger les données et remplir le select
+  async function loadDropdownEvents(showAll: boolean) {
+    dropdown.innerHTML = '<option value="">Chargement...</option>';
+    
+    // On désactive le bouton de validation pendant le rafraîchissement
+    submitBtn.disabled = true;
+    submitBtn.style.backgroundColor = "#f3f2f1";
+    submitBtn.style.color           = "#a19f9d";
+    submitBtn.style.cursor          = "not-allowed";
 
-    if (data.success && data.events.length > 0) {
-      dropdown.innerHTML = '<option value="">-- Sélectionner un événement --</option>';
-      data.events.forEach((ev: any) => {
-        const opt = document.createElement("option");
-        opt.value = ev.id;
-        opt.textContent = `${ev.label} (${new Date(ev.date_event).toLocaleDateString()})`;
-        dropdown.appendChild(opt);
+    try {
+      const response = await fetch(`${API_BASE_URL}/evenement/getTiersEvents.php`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ 
+          session_token: sessionToken, 
+          socid: tiersId,
+          show_all: showAll // 👈 On transmet la valeur actuelle de notre case à cocher
+        }),
       });
+      const data = await response.json();
 
-      dropdown.onchange = () => {
-        if (dropdown.value !== "") {
-          submitBtn.disabled = false;
-          submitBtn.style.backgroundColor = "#0078d4";
-          submitBtn.style.color           = "white";
-          submitBtn.style.cursor          = "pointer";
-        } else {
-          submitBtn.disabled = true;
-          submitBtn.style.backgroundColor = "#f3f2f1";
-          submitBtn.style.color           = "#a19f9d";
-          submitBtn.style.cursor          = "not-allowed";
-        }
-      };
-
-      submitBtn.onclick = () => processCreateNewEvent(btn, tiersId, parseInt(dropdown.value));
-    } else {
-      dropdown.innerHTML = '<option value="">Aucun événement trouvé</option>';
+      if (data.success && data.events.length > 0) {
+        dropdown.innerHTML = '<option value="">-- Sélectionner un événement --</option>';
+        data.events.forEach((ev: any) => {
+          const opt = document.createElement("option");
+          opt.value = ev.id;
+          opt.textContent = `${ev.label} (${ev.date_event ? new Date(ev.date_event).toLocaleDateString() : 'Date inconnue'})`;
+          dropdown.appendChild(opt);
+        });
+      } else {
+        dropdown.innerHTML = '<option value="">Aucun événement trouvé</option>';
+      }
+    } catch (err) {
+      dropdown.innerHTML = '<option value="">Erreur de connexion</option>';
     }
-  } catch (err) {
-    dropdown.innerHTML = '<option value="">Erreur de connexion</option>';
   }
+
+  // 3. Premier chargement initial de la liste (par défaut décoche = false)
+  await loadDropdownEvents(false);
+
+  // 4. Écouteur de changement (change) sur la Checkbox pour recharger dynamiquement
+  if (checkboxShowAll) {
+    checkboxShowAll.addEventListener("change", () => {
+      loadDropdownEvents(checkboxShowAll.checked);
+    });
+  }
+
+  // Gestion du changement sur le menu déroulant pour débloquer le bouton Valider
+  dropdown.onchange = () => {
+    if (dropdown.value !== "") {
+      submitBtn.disabled = false;
+      submitBtn.style.backgroundColor = "#0078d4";
+      submitBtn.style.color           = "white";
+      submitBtn.style.cursor          = "pointer";
+    } else {
+      submitBtn.disabled = true;
+      submitBtn.style.backgroundColor = "#f3f2f1";
+      submitBtn.style.color           = "#a19f9d";
+      submitBtn.style.cursor          = "not-allowed";
+    }
+  };
+
+  submitBtn.onclick = () => processCreateNewEvent(btn, tiersId, parseInt(dropdown.value));
 }
 
 async function processCreateNewEvent(
@@ -494,3 +684,4 @@ function setStatus(type: "ready" | "loading" | "error", message: string): void {
   if (indicator) indicator.className = `status-indicator ${type}`;
   if (text)      text.textContent    = message;
 }
+
