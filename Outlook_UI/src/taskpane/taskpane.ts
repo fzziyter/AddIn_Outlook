@@ -473,8 +473,12 @@ async function showSelectionModal(btn: HTMLButtonElement, tiersId: number, sessi
       margin-bottom: 8px;
     }
 
-    /* Select Dropdown */
-    .select-input {
+    /* Conteneur Recherche Hybride */
+    .search-container {
+      position: relative;
+      margin-bottom: 24px;
+    }
+    .search-input {
       width: 100%; 
       padding: 10px 12px; 
       border: 1px solid #adadad; 
@@ -484,14 +488,51 @@ async function showSelectionModal(btn: HTMLButtonElement, tiersId: number, sessi
       background: #ffffff; 
       color: #242424; 
       outline: none; 
-      margin-bottom: 24px; 
-      cursor: pointer; 
-      transition: all 0.2s ease; 
       box-sizing: border-box;
+      transition: all 0.2s ease; 
+      cursor: text;
     }
-    .select-input:focus {
+    .search-input:focus {
       border-color: ${parentBgColor}; /* 👈 Bordure active de la couleur de la mère */
       box-shadow: 0 0 0 2px rgba(0, 0, 0, 0.05);
+    }
+    .search-input:disabled {
+      background: #f5f5f5;
+      cursor: not-allowed;
+    }
+
+    /* Liste de résultats (Simule le Select ouvert) */
+    .dropdown-list {
+      position: absolute;
+      top: 100%;
+      left: 0;
+      right: 0;
+      background: #ffffff;
+      border: 1px solid #adadad;
+      border-radius: 6px;
+      max-height: 180px;
+      overflow-y: auto;
+      z-index: 1000;
+      box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+      display: none; 
+      margin-top: 4px;
+      padding: 0;
+      list-style: none;
+    }
+    .dropdown-item {
+      padding: 10px 12px;
+      font-size: 13px;
+      cursor: pointer;
+      color: #242424;
+      transition: background 0.1s ease;
+    }
+    .dropdown-item:hover {
+      background: #f3f2f1;
+    }
+    .dropdown-item.no-result {
+      color: #a19f9d;
+      cursor: default;
+      background: transparent !important;
     }
 
     /* Bouton Soumettre / Lier */
@@ -543,9 +584,12 @@ async function showSelectionModal(btn: HTMLButtonElement, tiersId: number, sessi
 
       <label class="field-label">Événements récents du client</label>
       
-      <select id="event-dropdown" class="select-input">
-        <option value="">Chargement...</option>
-      </select>
+      <div class="search-container">
+        <input type="text" id="event-search" class="search-input" placeholder="Chargement..." autocomplete="off" disabled />
+        <ul id="event-list" class="dropdown-list"></ul>
+      </div>
+
+      <input type="hidden" id="selected-event-id" value="" />
       
       <button id="btn-link-submit" disabled class="btn-submit">
         Lier à cet événement
@@ -555,21 +599,64 @@ async function showSelectionModal(btn: HTMLButtonElement, tiersId: number, sessi
   </div>
 `;
 
-  const dropdown        = document.getElementById("event-dropdown") as HTMLSelectElement;
+  // Récupération des éléments du DOM
+  const searchInput     = document.getElementById("event-search") as HTMLInputElement;
+  const eventList       = document.getElementById("event-list") as HTMLUListElement;
+  const hiddenInput     = document.getElementById("selected-event-id") as HTMLInputElement;
   const submitBtn       = document.getElementById("btn-link-submit") as HTMLButtonElement;
   const checkboxShowAll = document.getElementById("show-all-events") as HTMLInputElement;
+
+  // Tableau en mémoire vive pour stocker la liste des événements reçus par l'API
+  let localEventsCache: any[] = [];
 
   // Configuration du bouton de création d'événement classique
   document.getElementById("opt-new")!.onclick = () => processCreateNewEvent(btn, tiersId);
 
-  // Remarque : j'ai supprimé la modification JS de "btnNew.style.backgroundColor" au survol 
-  // car elle est maintenant gérée de manière beaucoup plus propre et universelle via 
-  // le filtre CSS `filter: brightness(0.85);` dans la balise <style> ci-dessus !
+  // 3. Génération et filtrage de la liste visuelle
+  function renderDropdownList(filterText: string = "") {
+    eventList.innerHTML = "";
+    const searchLower = filterText.toLowerCase().trim();
 
-  // 3. Fonction isolée pour charger les données et remplir le select
+    // Filtrage sur le titre ou la date convertie en string localisé
+    const filtered = localEventsCache.filter((ev: any) => {
+      const label = (ev.label || "").toLowerCase();
+      const dateStr = ev.date_event ? new Date(ev.date_event).toLocaleDateString().toLowerCase() : "";
+      return label.includes(searchLower) || dateStr.includes(searchLower);
+    });
+
+    if (filtered.length === 0) {
+      eventList.innerHTML = `<li class="dropdown-item no-result">Aucun événement trouvé</li>`;
+      return;
+    }
+
+    // Création dynamique des éléments li
+    filtered.forEach((ev: any) => {
+      const li = document.createElement("li");
+      li.className = "dropdown-item";
+      const formattedDate = ev.date_event ? new Date(ev.date_event).toLocaleDateString() : 'Date inconnue';
+      li.textContent = `${ev.label} (${formattedDate})`;
+      
+      // Comportement lors du clic sur un choix de la liste
+      li.onclick = (e) => {
+        e.stopPropagation(); // Évite les conflits d'arborescence de clic
+        searchInput.value = `${ev.label} (${formattedDate})`;
+        hiddenInput.value = ev.id.toString();
+        submitBtn.disabled = false;
+        eventList.style.display = "none";
+      };
+      eventList.appendChild(li);
+    });
+  }
+
+  // 4. Fonction isolée pour charger les données brutes depuis l'API Dolibarr
   async function loadDropdownEvents(showAll: boolean) {
-    dropdown.innerHTML = '<option value="">Chargement...</option>';
+    searchInput.placeholder = "Chargement...";
+    searchInput.disabled = true;
+    searchInput.value = "";
+    eventList.style.display = "none";
     submitBtn.disabled = true;
+    hiddenInput.value = "";
+    localEventsCache = [];
 
     try {
       const response = await fetch(`${API_BASE_URL}/evenement/getTiersEvents.php`, {
@@ -583,38 +670,63 @@ async function showSelectionModal(btn: HTMLButtonElement, tiersId: number, sessi
       });
       const data = await response.json();
 
-      if (data.success && data.events.length > 0) {
-        dropdown.innerHTML = '<option value="">-- Sélectionner un événement --</option>';
-        data.events.forEach((ev: any) => {
-          const opt = document.createElement("option");
-          opt.value = ev.id;
-          opt.textContent = `${ev.label} (${ev.date_event ? new Date(ev.date_event).toLocaleDateString() : 'Date inconnue'})`;
-          dropdown.appendChild(opt);
-        });
+      if (data.success && data.events && data.events.length > 0) {
+        localEventsCache = data.events;
+        searchInput.placeholder = "Rechercher ou sélectionner...";
+        searchInput.disabled = false;
       } else {
-        dropdown.innerHTML = '<option value="">Aucun événement trouvé</option>';
+        searchInput.placeholder = "Aucun événement disponible";
       }
     } catch (err) {
-      dropdown.innerHTML = '<option value="">Erreur de connexion</option>';
+      searchInput.placeholder = "Erreur de chargement réseau";
     }
   }
 
-  // 4. Premier chargement initial de la liste (par défaut décoche = false)
+  // 5. Premier chargement initial de la liste (par défaut décoche = false)
   await loadDropdownEvents(false);
 
-  // 5. Écouteur de changement (change) sur la Checkbox pour recharger dynamiquement
+  // 6. Gestionnaires d'événements et listeners UI
+
+  // Ouvrir la liste au clic ou focus dans le champ
+  searchInput.addEventListener("focus", () => {
+    if (localEventsCache.length > 0) {
+      renderDropdownList(searchInput.value);
+      eventList.style.display = "block";
+    }
+  });
+
+  // Filtrer en temps réel à chaque saisie clavier
+  searchInput.addEventListener("input", () => {
+    // Si l'utilisateur modifie le texte saisi, on invalide la sélection passée
+    hiddenInput.value = "";
+    submitBtn.disabled = true;
+
+    eventList.style.display = "block";
+    renderDropdownList(searchInput.value);
+  });
+
+  // Fermer le menu si l'utilisateur clique en dehors du conteneur de recherche
+  document.addEventListener("click", (e) => {
+    const target = e.target as HTMLElement;
+    if (!target.closest(".search-container")) {
+      eventList.style.display = "none";
+    }
+  });
+
+  // Écouteur de changement (change) sur la Checkbox pour recharger via API
   if (checkboxShowAll) {
     checkboxShowAll.addEventListener("change", () => {
       loadDropdownEvents(checkboxShowAll.checked);
     });
   }
 
-  // Gestion du changement sur le menu déroulant pour débloquer le bouton Valider
-  dropdown.onchange = () => {
-    submitBtn.disabled = (dropdown.value === "");
+  // Action finale de liaison sur le clic du bouton principal
+  submitBtn.onclick = () => {
+    const parentId = parseInt(hiddenInput.value);
+    if (!isNaN(parentId)) {
+      processCreateNewEvent(btn, tiersId, parentId);
+    }
   };
-
-  submitBtn.onclick = () => processCreateNewEvent(btn, tiersId, parseInt(dropdown.value));
 }
 
 async function processCreateNewEvent(
