@@ -60,7 +60,7 @@ export default function AddClient() {
 
         setTimeout(() => navigate("/clients"), 2000);
       } else {
-        setMessage("❌ Erreur : " + (data.error || "Inconnue"));
+        setMessage("❌ Erreur : " + (data.error || "Inconnue") + (data.details ? ` — ${data.details}` : ""));
       }
     } catch {
       setMessage("❌ Impossible de contacter le serveur.");
