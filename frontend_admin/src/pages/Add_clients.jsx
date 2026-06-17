@@ -12,6 +12,7 @@ export default function AddClient() {
     dolibarr_api_key: "",
     domain: "",
     logo: "",
+    palette_id: "default",
   });
 
   const [message, setMessage] = useState("");
@@ -60,12 +61,19 @@ export default function AddClient() {
 
         setTimeout(() => navigate("/clients"), 2000);
       } else {
-        setMessage("❌ Erreur : " + (data.error || "Inconnue"));
+        setMessage("❌ Erreur : " + (data.error || "Inconnue") + (data.details ? ` — ${data.details}` : ""));
       }
     } catch {
       setMessage("❌ Impossible de contacter le serveur.");
     }
   };
+  const [palettes, setPalettes] = useState([]);
+
+  useEffect(() => {
+    fetch(`${API_BACK_URL}/getPalettes.php`)
+      .then(r => r.json())
+      .then(d => setPalettes(d.palettes || []));
+  }, []);
 
   return (
     <div className="client-wrapper">
@@ -73,6 +81,7 @@ export default function AddClient() {
         <div className="header">
           <h2>Ajouter un client</h2>
         </div>
+
 
         <form onSubmit={handleSubmit}>
           {/* Section : Informations Client */}
@@ -97,6 +106,14 @@ export default function AddClient() {
                 />
               </div>
             ))}
+          </div>
+          <div className="input-group">
+            <label>Palette de couleurs</label>
+            <select name="palette_id" value={form.palette_id} onChange={handleChange}>
+              {palettes.map(p => (
+                <option key={p.id} value={p.id}>{p.label}</option>
+              ))}
+            </select>
           </div>
 
           {message && (
