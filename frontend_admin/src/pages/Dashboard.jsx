@@ -11,9 +11,10 @@ import {
   YAxis,
   CartesianGrid,
   Tooltip,
-  ResponsiveContainer
+  ResponsiveContainer,
+  Bar,
+  BarChart
 } from "recharts";
-
 export default function Dashboard() {
   const [stats, setStats] = useState({
     total: 0,
@@ -24,6 +25,7 @@ export default function Dashboard() {
 
   const [monthlyClients, setMonthlyClients] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [clientEvents, setClientEvents] = useState([]);
 
   const navigate = useNavigate();
 
@@ -32,26 +34,31 @@ export default function Dashboard() {
     try {
       setLoading(true);
       
-      // Appel simultané des deux endpoints
-      const [clientsRes, statsRes] = await Promise.all([
+      // 1. Appel des 4 endpoints en parallèle (ordre corrigé)
+      const [clientsRes, statsRes, monthlyRes, eventsRes] = await Promise.all([
         axios.get(`${API_BACK_URL}/getClients.php`),
-        axios.get(`${API_BACK_URL}/getClientsPerMonth.php`)
+        axios.get(`${API_BACK_URL}/getDashboardStats.php`), // statsRes contient les totaux
+        axios.get(`${API_BACK_URL}/getClientsPerMonth.php`),
+        axios.get(`${API_BACK_URL}/getEventsPerClient.php`) 
       ]);
 
-      // 1. Gestion des clients (pour le tableau et le total)
       const clientsData = Array.isArray(clientsRes.data) ? clientsRes.data : [];
-      
-      // 2. Gestion des stats mensuelles (le résultat de votre nouveau fichier)
-      const monthlyData = statsRes.data.success ? statsRes.data.data : [];
+      const monthlyData = monthlyRes.data.success ? monthlyRes.data.data : [];
+      const eventsData = eventsRes.data.success ? eventsRes.data.data : [];
 
+      // 2. Mise à jour de l'état
       setStats({
-        total: clientsData.length,
-        recent: clientsData.slice(0, 5),
-        recentAdded: clientsData.length > 0 ? clientsData[0].domain : "Aucun",
-        apiStatus: true
-      });
+  total: clientsData.length,
+  // Ajoutez des logs ici pour voir ce qui arrive dans la console F12
+  totalEventTypes: statsRes.data?.totalEventTypes ?? 0, 
+  totalButtons: statsRes.data?.totalButtons ?? 0,
+  recent: clientsData.slice(0, 5),
+  recentAdded: clientsData.length > 0 ? clientsData[0].domain : "Aucun",
+  apiStatus: true
+});
 
       setMonthlyClients(monthlyData);
+      setClientEvents(eventsData);
 
     } catch (error) {
       console.error("Erreur chargement Dashboard:", error);
@@ -98,20 +105,33 @@ export default function Dashboard() {
 
         <div className={`stat-card ${stats.apiStatus ? "green" : "red"}`}>
           <div className="stat-icon">
-            {stats.apiStatus ? "🟢" : "🔴"}
-          </div>
+    {stats.apiStatus ? "🟢" : "🔴"}
+  </div>
 
-          <div className="stat-info">
-            <span className="stat-label">Status API</span>
+  <div className="stat-info">
+    <span className="stat-label">Status API</span>
 
-            <span className="stat-value">
-              {stats.apiStatus
-                ? "Opérationnelle"
-                : "Indisponible"}
-            </span>
-          </div>
-        </div>
-      </div>
+    <span className="stat-value">
+      {stats.apiStatus ? "Opérationnelle" : "Indisponible"}
+    </span>
+  </div>
+  
+</div>
+<div className="stat-card purple">
+  <div className="stat-icon">📅</div>
+  <div className="stat-info">
+    <span className="stat-label">Types d'événements</span>
+    <span className="stat-value">{stats.totalEventTypes}</span>
+  </div>
+</div>
+<div className="stat-card orange">
+  <div className="stat-icon">🔘</div>
+  <div className="stat-info">
+    <span className="stat-label">Boutons Outlook</span>
+    <span className="stat-value">{stats.totalButtons}</span>
+  </div>
+</div>
+      </div>        
 
       <div className="dashboard-content">
         <div className="recent-section">
@@ -210,6 +230,33 @@ export default function Dashboard() {
           </LineChart>
         </ResponsiveContainer>
       </div>
+      <div className="chart-card">
+  <h3>Nombre d'événements par client</h3>
+  
+  {/* Le ResponsiveContainer est indispensable pour les graphiques Recharts */}
+  <ResponsiveContainer width="100%" height={300}>
+    <BarChart 
+      data={clientEvents} 
+      margin={{ top: 20, right: 30, left: 0, bottom: 60 }}
+    >
+      <CartesianGrid strokeDasharray="3 3" />
+      <XAxis 
+        dataKey="username" 
+        angle={-45} 
+        textAnchor="end" 
+        interval={0} 
+        fontSize={10} 
+      />
+      <YAxis allowDecimals={false} />
+      <Tooltip />
+      <Bar 
+        dataKey="total_events" 
+        fill="#7c3aed" 
+        radius={[4, 4, 0, 0]} 
+      />
+    </BarChart>
+  </ResponsiveContainer>
+</div>
     </div>
   );
 }
