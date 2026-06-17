@@ -387,6 +387,7 @@ async function showSelectionModal(btn: HTMLButtonElement, tiersId: number, sessi
       font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif;
       color: #242424;
       box-sizing: border-box;
+      overflow-y: auto;
     }
 
     /* Bouton Retour */
