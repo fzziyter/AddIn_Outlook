@@ -66,15 +66,21 @@ const EventSelector = () => {
                 </div>
                 
                 <select 
-                    onChange={(e) => setSelectedUser(e.target.value)} 
-                    value={selectedUser}
-                    className="admin-select"
-                >
-                    <option value="">-- Choisir un utilisateur --</option>
-                    {users.map(u => (
-                        <option key={u.id} value={u.id}>{u.username}</option>
-                    ))}
-                </select>
+    onChange={(e) => setSelectedUser(e.target.value)} 
+    value={selectedUser}
+    className="admin-select"
+>
+    <option value="">-- Choisir un utilisateur --</option>
+    
+    {/* Option ajoutée ici */}
+    <option value="public" >
+        Événements Publics (Globaux)
+    </option>
+    
+    {users.map(u => (
+        <option key={u.id} value={u.id}>{u.username}</option>
+    ))}
+</select>
             </div>
 
             <div className="event-table-wrapper">

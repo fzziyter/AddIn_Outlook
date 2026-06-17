@@ -26,22 +26,33 @@ try {
     }
 
     // Action 2 : Lister les types filtrés par utilisateur (Table locale 'dolibarr_event_types')
-    if ($action == 'list_types') {
-        $user_id = $_GET['user_id'] ?? 0;
-        
-        if (empty($user_id)) {
-            echo json_encode([]);
-            exit;
-        }
+    // Dans l'action 'list_types' :
+   if ($action == 'list_types') {
+    $user_id = $_GET['user_id'] ?? '';
+    
+    if (empty($user_id)) {
+        echo json_encode([]);
+        exit;
+    }
 
-        // Requête sur votre table locale uniquement
+    // Gestion du choix "public"
+    if ($user_id === 'public') {
+        // Sélectionne uniquement les événements où fk_user est 0 ou NULL
+        $stmt = $conn->prepare("SELECT code, libelle, color, position, source 
+                                FROM dolibarr_event_types 
+                                WHERE fk_user IS NULL OR fk_user = 0");
+        $stmt->execute();
+    } else {
+        // Sélectionne les événements de l'utilisateur choisi
         $stmt = $conn->prepare("SELECT code, libelle, color, position, source 
                                 FROM dolibarr_event_types 
                                 WHERE fk_user = :user_id");
         $stmt->execute([':user_id' => $user_id]);
-        echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC));
-        exit;
     }
+    
+    echo json_encode($stmt->fetchAll(PDO::FETCH_ASSOC));
+    exit;
+}
 
     // Action 3 : Suppression uniquement dans la base locale
     if ($action == 'delete' && $_SERVER['REQUEST_METHOD'] === 'POST') {

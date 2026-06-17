@@ -127,7 +127,7 @@ export default function Dashboard() {
 <div className="stat-card orange">
   <div className="stat-icon">🔘</div>
   <div className="stat-info">
-    <span className="stat-label">Boutons Outlook</span>
+    <span className="stat-label">événements Outlook</span>
     <span className="stat-value">{stats.totalButtons}</span>
   </div>
 </div>
