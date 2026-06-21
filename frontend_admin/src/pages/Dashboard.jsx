@@ -128,7 +128,9 @@ export default function Dashboard() {
   <div className="stat-icon">🔘</div>
   <div className="stat-info">
     <span className="stat-label">événements Outlook</span>
-    <span className="stat-value">{stats.totalButtons}</span>
+    <span className="stat-value">
+  {clientEvents.reduce((sum, c) => sum + c.total_events, 0)}
+</span>
   </div>
 </div>
       </div>        
